@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Use environment variable for API URL in production, fallback to /api for dev proxy
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+// Use environment variable for API URL in production, fallback to Render backend as default
+const API_URL = import.meta.env.VITE_API_URL || 'https://questmatch-backend.onrender.com/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -41,3 +41,9 @@ export const matches = {
 };
 
 export default api;
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
