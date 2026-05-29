@@ -3,6 +3,7 @@ services:
     name: questmatch-backend
     env: node
     plan: free
+    rootDir: backend
     buildCommand: npm install
     startCommand: node server.js
     envVars:
@@ -11,16 +12,17 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: TURSO_URL
-        fromContext: secret
+        value: sqlite://local.db
       - key: TURSO_AUTH_TOKEN
-        fromContext: secret
+        value: placeholder
       - key: NODE_ENV
         value: production
 
-  - type: static
+  - type: static_site
     name: questmatch-frontend
     env: static
     plan: free
+    rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishDir: dist
     envVars:
