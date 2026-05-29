@@ -7,11 +7,18 @@ services:
     buildCommand: npm install
     startCommand: node server.js
     envVars:
-      - key: PORT
-        value: 3000
       - key: TURSO_URL
         value: file:local.db
       - key: TURSO_AUTH_TOKEN
         value: placeholder
       - key: NODE_ENV
         value: production
+
+  - type: static_site
+    name: questmatch-frontend
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishDir: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://questmatch-backend.onrender.com/api
