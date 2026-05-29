@@ -10,6 +10,64 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Initialize Database Tables
+const initDB = async () => {
+  try {
+    await db.run(`
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        username TEXT UNIQUE NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        bio TEXT,
+        platforms TEXT,
+        games TEXT,
+        skill_level TEXT,
+        avatar_url TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await db.run(`
+      CREATE TABLE IF NOT EXISTS swipes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        swiper_id TEXT NOT NULL,
+        swiped_id TEXT NOT NULL,
+        direction TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(swiper_id) REFERENCES users(id),
+        FOREIGN KEY(swiped_id) REFERENCES users(id),
+        UNIQUE(swiper_id, swiped_id)
+      )
+    `);
+    await db.run(`
+      CREATE TABLE IF NOT EXISTS matches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user1_id TEXT NOT NULL,
+        user2_id TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user1_id) REFERENCES users(id),
+        FOREIGN KEY(user2_id) REFERENCES users(id),
+        UNIQUE(user1_id, user2_id)
+      )
+    `);
+    await db.run(`
+      CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        match_id INTEGER NOT NULL,
+        sender_id TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(match_id) REFERENCES matches(id),
+        FOREIGN KEY(sender_id) REFERENCES users(id)
+      )
+    `);
+    console.log('Database tables initialized');
+  } catch (error) {
+    console.error('Failed to initialize database tables:', error);
+  }
+};
+initDB();
+
 const JWT_SECRET = process.env.JWT_SECRET || 'questmatch-secret-key';
 
 // Middleware for auth
@@ -227,3 +285,9 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://0.0.0.0:${PORT}`);
 });
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
