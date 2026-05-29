@@ -14,8 +14,10 @@ services:
       - key: NODE_ENV
         value: production
 
-  - type: static_site
+  - type: web
     name: questmatch-frontend
+    env: static
+    plan: free
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishDir: dist
