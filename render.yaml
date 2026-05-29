@@ -7,24 +7,13 @@ services:
     buildCommand: npm install
     startCommand: node server.js
     envVars:
-      - key: PORT
-        value: 3000
-      - key: JWT_SECRET
-        generateValue: true
       - key: TURSO_URL
         value: sqlite://local.db
       - key: TURSO_AUTH_TOKEN
         value: placeholder
-      - key: NODE_ENV
-        value: production
 
-  - type: static_site
+  - type: static
     name: questmatch-frontend
-    env: static
-    plan: free
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishDir: dist
-    envVars:
-      - key: VITE_API_URL
-        value: https://questmatch-backend.onrender.com/api
