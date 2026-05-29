@@ -1,0 +1,7 @@
+nohup: ignoring input
+
+> backend@1.0.0 start
+> node server.js
+
+◇ injected env (2) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+Server running on http://0.0.0.0:3001

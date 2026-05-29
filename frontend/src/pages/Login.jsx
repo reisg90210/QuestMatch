@@ -1,0 +1,67 @@
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { auth } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+
+const Login = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await auth.login({ email, password });
+      login(response.data.user, response.data.token);
+      navigate('/');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Login failed');
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center px-6">
+      <img src="/assets/questmatch-logo.png" className="w-28 h-28 mb-6" alt="QuestMatch" />
+      <h1 className="text-4xl font-bold bg-gradient-to-r from-[#7c3aed] to-[#06b6d4] bg-clip-text text-transparent">
+        QuestMatch
+      </h1>
+      <p className="text-[#94a3b8] text-lg mt-2">Find Your Perfect Squad</p>
+
+      <form onSubmit={handleSubmit} className="w-full max-w-sm mt-10 space-y-4">
+        {error && <div className="bg-red-500/20 text-red-400 p-3 rounded-xl text-sm text-center border border-red-500/30">{error}</div>}
+        
+        <input
+          type="email"
+          placeholder="Email"
+          className="w-full px-5 py-4 bg-[#1e1e32] border border-[#2a2a3e] rounded-2xl text-[#f1f5f9] placeholder:text-[#64748b] focus:outline-none focus:border-[#7c3aed] transition-colors"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          className="w-full px-5 py-4 bg-[#1e1e32] border border-[#2a2a3e] rounded-2xl text-[#f1f5f9] placeholder:text-[#64748b] focus:outline-none focus:border-[#7c3aed] transition-colors"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+        
+        <button 
+          type="submit"
+          className="w-full py-4 bg-gradient-to-r from-[#7c3aed] to-[#06b6d4] rounded-2xl text-white font-bold text-lg hover:opacity-90 transition-opacity shadow-lg shadow-purple-500/20"
+        >
+          Login
+        </button>
+        
+        <p className="text-center text-[#64748b] text-sm">
+          Don't have an account? <Link to="/signup" className="text-[#06b6d4]">Sign Up</Link>
+        </p>
+      </form>
+    </div>
+  );
+};
+
+export default Login;
