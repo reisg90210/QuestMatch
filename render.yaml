@@ -11,9 +11,3 @@ services:
         value: sqlite://local.db
       - key: TURSO_AUTH_TOKEN
         value: placeholder
-
-  - type: static
-    name: questmatch-frontend
-    rootDir: frontend
-    buildCommand: npm install && npm run build
-    staticPublishDir: dist
