@@ -13,55 +13,12 @@ app.use(express.json());
 // Initialize Database Tables
 const initDB = async () => {
   try {
-    await db.run(`
-      CREATE TABLE IF NOT EXISTS users (
-        id TEXT PRIMARY KEY,
-        username TEXT UNIQUE NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        password_hash TEXT NOT NULL,
-        bio TEXT,
-        platforms TEXT,
-        games TEXT,
-        skill_level TEXT,
-        avatar_url TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    await db.run(`
-      CREATE TABLE IF NOT EXISTS swipes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        swiper_id TEXT NOT NULL,
-        swiped_id TEXT NOT NULL,
-        direction TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(swiper_id) REFERENCES users(id),
-        FOREIGN KEY(swiped_id) REFERENCES users(id),
-        UNIQUE(swiper_id, swiped_id)
-      )
-    `);
-    await db.run(`
-      CREATE TABLE IF NOT EXISTS matches (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user1_id TEXT NOT NULL,
-        user2_id TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(user1_id) REFERENCES users(id),
-        FOREIGN KEY(user2_id) REFERENCES users(id),
-        UNIQUE(user1_id, user2_id)
-      )
-    `);
-    await db.run(`
-      CREATE TABLE IF NOT EXISTS messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        match_id INTEGER NOT NULL,
-        sender_id TEXT NOT NULL,
-        content TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(match_id) REFERENCES matches(id),
-        FOREIGN KEY(sender_id) REFERENCES users(id)
-      )
-    `);
-    console.log('Database tables initialized');
+    console.log('Ensuring database tables exist...');
+    await db.run('CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL, email TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, bio TEXT, platforms TEXT, games TEXT, skill_level TEXT, avatar_url TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)');
+    await db.run('CREATE TABLE IF NOT EXISTS swipes (id INTEGER PRIMARY KEY AUTOINCREMENT, swiper_id TEXT NOT NULL, swiped_id TEXT NOT NULL, direction TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(swiper_id) REFERENCES users(id), FOREIGN KEY(swiped_id) REFERENCES users(id), UNIQUE(swiper_id, swiped_id))');
+    await db.run('CREATE TABLE IF NOT EXISTS matches (id INTEGER PRIMARY KEY AUTOINCREMENT, user1_id TEXT NOT NULL, user2_id TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(user1_id) REFERENCES users(id), FOREIGN KEY(user2_id) REFERENCES users(id), UNIQUE(user1_id, user2_id))');
+    await db.run('CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT, match_id INTEGER NOT NULL, sender_id TEXT NOT NULL, content TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(match_id) REFERENCES matches(id), FOREIGN KEY(sender_id) REFERENCES users(id))');
+    console.log('Database tables verified/created');
   } catch (error) {
     console.error('Failed to initialize database tables:', error);
   }
@@ -94,13 +51,15 @@ app.post('/api/auth/signup', async (req, res) => {
   if (!username || !email || !password) return res.status(400).json({ error: 'Missing fields' });
 
   try {
+    // Ensure tables exist before signup
+    await initDB();
     const passwordHash = await bcrypt.hash(password, 10);
     const id = uuidv4();
     await db.run('INSERT INTO users (id, username, email, password_hash) VALUES (?, ?, ?, ?)', [id, username, email, passwordHash]);
     res.status(201).json({ message: 'User created', id });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to create user' });
+    console.error('Signup Error:', error);
+    res.status(500).json({ error: `Failed to create user: ${error.message}` });
   }
 });
 
@@ -108,13 +67,12 @@ app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
   try {
     const users = await db.run('SELECT * FROM users WHERE email = ?', [email]);
-    if (users.length === 0) return res.status(400).json({ error: 'User not found' });
-
     const user = users[0];
-    const validPassword = await bcrypt.compare(password, user.password_hash);
-    if (!validPassword) return res.status(400).json({ error: 'Invalid password' });
+    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
 
-    const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET);
+    const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '24h' });
     res.json({ token, user: { id: user.id, username: user.username, email: user.email } });
   } catch (error) {
     console.error(error);
@@ -122,138 +80,83 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Profile Routes
+// User Profile Routes
 app.get('/api/users/profile', authenticateToken, async (req, res) => {
   try {
     const users = await db.run('SELECT id, username, email, bio, platforms, games, skill_level, avatar_url FROM users WHERE id = ?', [req.user.id]);
-    if (users.length === 0) return res.status(404).json({ error: 'User not found' });
-    
-    const user = users[0];
-    if (user.platforms) user.platforms = JSON.parse(user.platforms);
-    if (user.games) user.games = JSON.parse(user.games);
-    
-    res.json(user);
+    res.json(users[0]);
   } catch (error) {
-    console.error(error);
     res.status(500).json({ error: 'Failed to fetch profile' });
   }
 });
 
 app.put('/api/users/profile', authenticateToken, async (req, res) => {
   const { bio, platforms, games, skill_level, avatar_url } = req.body;
-  
   try {
-    const platformsStr = platforms ? JSON.stringify(platforms) : null;
-    const gamesStr = games ? JSON.stringify(games) : null;
-
-    let updateFields = [];
-    let params = [];
-    
-    if (bio !== undefined) { updateFields.push('bio = ?'); params.push(bio); }
-    if (platforms !== undefined) { updateFields.push('platforms = ?'); params.push(platformsStr); }
-    if (games !== undefined) { updateFields.push('games = ?'); params.push(gamesStr); }
-    if (skill_level !== undefined) { updateFields.push('skill_level = ?'); params.push(skill_level); }
-    if (avatar_url !== undefined) { updateFields.push('avatar_url = ?'); params.push(avatar_url); }
-
-    if (updateFields.length === 0) return res.status(400).json({ error: 'No fields to update' });
-
-    params.push(req.user.id);
-    await db.run(`UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`, params);
+    await db.run(
+      'UPDATE users SET bio = ?, platforms = ?, games = ?, skill_level = ?, avatar_url = ? WHERE id = ?',
+      [bio, JSON.stringify(platforms), JSON.stringify(games), skill_level, avatar_url, req.user.id]
+    );
     res.json({ message: 'Profile updated' });
   } catch (error) {
-    console.error(error);
     res.status(500).json({ error: 'Failed to update profile' });
-  }
-});
-
-app.get('/api/users/:id', authenticateToken, async (req, res) => {
-  try {
-    const users = await db.run('SELECT id, username, bio, platforms, games, skill_level, avatar_url FROM users WHERE id = ?', [req.params.id]);
-    if (users.length === 0) return res.status(404).json({ error: 'User not found' });
-    
-    const user = users[0];
-    if (user.platforms) user.platforms = JSON.parse(user.platforms);
-    if (user.games) user.games = JSON.parse(user.games);
-    
-    res.json(user);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to fetch user' });
   }
 });
 
 // Discovery & Swiping
 app.get('/api/discover', authenticateToken, async (req, res) => {
   try {
-    const swipesRows = await db.run('SELECT swiped_id FROM swipes WHERE swiper_id = ?', [req.user.id]);
-    const swipedIds = swipesRows.map(s => s.swiped_id);
+    // Basic discovery: users not yet swiped on
+    const potentialMatches = await db.run(`
+      SELECT id, username, bio, platforms, games, skill_level, avatar_url 
+      FROM users 
+      WHERE id != ? 
+      AND id NOT IN (SELECT swiped_id FROM swipes WHERE swiper_id = ?)
+      LIMIT 20
+    `, [req.user.id, req.user.id]);
     
-    let query = 'SELECT id, username, bio, platforms, games, skill_level, avatar_url FROM users WHERE id != ?';
-    let params = [req.user.id];
+    // Parse JSON fields
+    const parsed = potentialMatches.map(u => ({
+      ...u,
+      platforms: u.platforms ? JSON.parse(u.platforms) : [],
+      games: u.games ? JSON.parse(u.games) : []
+    }));
     
-    if (swipedIds.length > 0) {
-      query += ` AND id NOT IN (${swipedIds.map(() => '?').join(',')})`;
-      params.push(...swipedIds);
-    }
-    
-    const potentialMatches = await db.run(query, params);
-    
-    potentialMatches.forEach(u => {
-      if (u.platforms) u.platforms = JSON.parse(u.platforms);
-      if (u.games) u.games = JSON.parse(u.games);
-    });
-    
-    res.json(potentialMatches);
+    res.json(parsed);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to fetch discovery users' });
+    res.status(500).json({ error: 'Failed to fetch discovery list' });
   }
 });
 
 app.post('/api/swipes', authenticateToken, async (req, res) => {
   const { swiped_id, direction } = req.body;
-  if (!swiped_id || !['like', 'dislike'].includes(direction)) {
-    return res.status(400).json({ error: 'Invalid swipe' });
-  }
-
   try {
     await db.run('INSERT INTO swipes (swiper_id, swiped_id, direction) VALUES (?, ?, ?)', [req.user.id, swiped_id, direction]);
     
     if (direction === 'like') {
-      const mutualLike = await db.run('SELECT * FROM swipes WHERE swiper_id = ? AND swiped_id = ? AND direction = ?', [swiped_id, req.user.id, 'like']);
-      
-      if (mutualLike.length > 0) {
-        const user1 = req.user.id < swiped_id ? req.user.id : swiped_id;
-        const user2 = req.user.id < swiped_id ? swiped_id : req.user.id;
-        
-        await db.run('INSERT OR IGNORE INTO matches (user1_id, user2_id) VALUES (?, ?)', [user1, user2]);
-        const matches = await db.run('SELECT id FROM matches WHERE user1_id = ? AND user2_id = ?', [user1, user2]);
-        
-        return res.json({ match: true, match_id: matches[0].id });
+      const mutual = await db.run('SELECT * FROM swipes WHERE swiper_id = ? AND swiped_id = ? AND direction = "like"', [swiped_id, req.user.id]);
+      if (mutual.length > 0) {
+        await db.run('INSERT INTO matches (user1_id, user2_id) VALUES (?, ?)', [req.user.id, swiped_id]);
+        return res.json({ match: true });
       }
     }
-    
     res.json({ match: false });
   } catch (error) {
-    console.error(error);
     res.status(500).json({ error: 'Failed to record swipe' });
   }
 });
 
-// Matches & Chat
+// Matches & Messages
 app.get('/api/matches', authenticateToken, async (req, res) => {
   try {
     const matches = await db.run(`
-      SELECT m.id, 
-             u.id as other_user_id, u.username, u.avatar_url
+      SELECT m.id as match_id, u.id, u.username, u.avatar_url 
       FROM matches m
       JOIN users u ON (u.id = m.user1_id OR u.id = m.user2_id)
-      WHERE (m.user1_id = ? OR m.user2_id = ?)
-      AND u.id != ?
+      WHERE (m.user1_id = ? OR m.user2_id = ?) AND u.id != ?
     `, [req.user.id, req.user.id, req.user.id]);
     res.json(matches);
   } catch (error) {
-    console.error(error);
     res.status(500).json({ error: 'Failed to fetch matches' });
   }
 });
@@ -263,31 +166,21 @@ app.get('/api/matches/:match_id/messages', authenticateToken, async (req, res) =
     const messages = await db.run('SELECT * FROM messages WHERE match_id = ? ORDER BY created_at ASC', [req.params.match_id]);
     res.json(messages);
   } catch (error) {
-    console.error(error);
     res.status(500).json({ error: 'Failed to fetch messages' });
   }
 });
 
 app.post('/api/matches/:match_id/messages', authenticateToken, async (req, res) => {
   const { content } = req.body;
-  if (!content) return res.status(400).json({ error: 'Message content required' });
-
   try {
     await db.run('INSERT INTO messages (match_id, sender_id, content) VALUES (?, ?, ?)', [req.params.match_id, req.user.id, content]);
     res.status(201).json({ message: 'Message sent' });
   } catch (error) {
-    console.error(error);
     res.status(500).json({ error: 'Failed to send message' });
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on http://0.0.0.0:${PORT}`);
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
-/home/engine/.bashrc: line 1: syntax error near unexpected token `('
-/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
-/home/engine/.bashrc: line 1: syntax error near unexpected token `('
-/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
-/home/engine/.bashrc: line 1: syntax error near unexpected token `('
-/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
