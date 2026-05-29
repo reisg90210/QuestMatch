@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { users } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, Save, Camera, Check } from 'lucide-react';
+import { LogOut, Save, Camera, Check, X } from 'lucide-react';
 
 const Profile = () => {
   const { logout, user } = useAuth();
@@ -15,6 +15,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
 
   const allPlatforms = ["PC", "PS5", "Xbox", "Nintendo Switch", "Mobile"];
   const allGames = [
@@ -22,6 +23,13 @@ const Profile = () => {
     { id: "Valorant", name: "Valorant", thumb: "/assets/valorant-thumbnail.jpg" },
     { id: "Call of Duty", name: "Call of Duty", thumb: "/assets/cod-thumbnail.jpg" },
     { id: "Fortnite", name: "Fortnite", thumb: "/assets/fortnite-thumbnail.jpg" }
+  ];
+
+  const avatars = [
+    "/assets/avatar-gamer-1.jpg",
+    "/assets/avatar-gamer-2.jpg",
+    "/assets/avatar-gamer-3.jpg",
+    "/assets/avatar-gamer-4.jpg",
   ];
 
   useEffect(() => {
@@ -101,11 +109,49 @@ const Profile = () => {
               alt="Avatar" 
             />
           </div>
-          <button className="absolute bottom-0 right-0 bg-[#7c3aed] p-2.5 rounded-2xl border-4 border-[#0a0a0f] text-white shadow-lg">
+          <button 
+            onClick={() => setIsPickerOpen(true)}
+            className="absolute bottom-0 right-0 bg-[#7c3aed] p-2.5 rounded-2xl border-4 border-[#0a0a0f] text-white shadow-lg hover:scale-110 transition-transform"
+          >
             <Camera size={18} />
           </button>
         </div>
       </div>
+
+      {/* Avatar Picker Modal */}
+      {isPickerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
+          <div className="bg-[#1a1a2e] w-full max-w-sm rounded-3xl p-6 border border-[#2a2a3e] shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-white font-black uppercase tracking-tight">Select Avatar</h2>
+              <button onClick={() => setIsPickerOpen(false)} className="text-[#64748b] hover:text-white">
+                <X size={24} />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {avatars.map((url) => (
+                <button
+                  key={url}
+                  onClick={() => {
+                    setProfile({ ...profile, avatar_url: url });
+                    setIsPickerOpen(false);
+                  }}
+                  className={`relative aspect-square rounded-2xl overflow-hidden border-4 transition-all ${
+                    profile.avatar_url === url ? 'border-[#7c3aed] scale-95' : 'border-transparent opacity-60 grayscale hover:opacity-100 hover:grayscale-0'
+                  }`}
+                >
+                  <img src={url} className="w-full h-full object-cover" alt="Gamer Avatar" />
+                  {profile.avatar_url === url && (
+                    <div className="absolute inset-0 bg-[#7c3aed]/20 flex items-center justify-center">
+                      <Check className="text-white" size={32} strokeWidth={4} />
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="px-6 mt-4 text-center">
         <h1 className="text-2xl font-black text-white italic uppercase tracking-tight">{user?.username || 'Gamer'}</h1>
@@ -115,7 +161,7 @@ const Profile = () => {
       {/* Form Content */}
       <div className="px-6 mt-10 space-y-8 max-w-lg mx-auto">
         {message && (
-          <div className="bg-[#10b981]/10 text-[#10b981] p-4 rounded-2xl text-sm border border-[#10b981]/20 flex items-center gap-3">
+          <div className="bg-[#10b981]/10 text-[#10b981] p-4 rounded-2xl text-sm border border-[#10b981]/20 flex items-center gap-3 animate-bounce">
             <Check size={18} /> {message}
           </div>
         )}
