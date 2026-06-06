@@ -1,134 +1,157 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Heart, Star, Info, RefreshCw } from 'lucide-react';
-import { discovery, swipes } from '../services/api';
+import { Heart, X, Star, Users, Gamepad2, Clock, Trophy } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 
 const Discover = () => {
-  const [users, setUsers] = useState([]);
+  const { user } = useAuth();
+  const [items, setItems] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [match, setMatch] = useState(null);
   const [swipeDirection, setSwipeDirection] = useState(null);
+  const [showMatchOverlay, setShowMatchOverlay] = useState(false);
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
-    setLoading(true);
-    try {
-      const response = await discovery.getPotentialMatches();
-      setUsers(response.data);
-      setCurrentIndex(0);
-    } catch (err) {
-      console.error('Failed to fetch users', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const fetchData = async () => {
+      try {
+        const [usersRes, questsRes] = await Promise.all([
+          api.get('/users'),
+          api.get('/api/quests')
+        ]);
+        
+        const others = usersRes.data.filter(u => u.id !== user.id);
+        const activeQuests = questsRes.data.filter(q => q.creator_id !== user.id);
+        
+        // Interleave users and quests
+        const combined = [];
+        const maxLen = Math.max(others.length, activeQuests.length);
+        for (let i = 0; i < maxLen; i++) {
+          if (others[i]) combined.push({ ...others[i], itemType: 'user' });
+          if (activeQuests[i]) combined.push({ ...activeQuests[i], itemType: 'quest' });
+        }
+        
+        setItems(combined);
+      } catch (err) {
+        console.error('Failed to fetch discovery data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [user.id]);
 
   const handleSwipe = async (direction) => {
-    if (currentIndex >= users.length) return;
+    if (currentIndex >= items.length) return;
     
-    const swipedUser = users[currentIndex];
+    const currentItem = items[currentIndex];
     setSwipeDirection(direction === 'like' ? 'right' : 'left');
-    
-    try {
-      const response = await swipes.submitSwipe(swipedUser.id, direction);
-      if (response.data.match) {
-        setMatch(swipedUser);
-      }
-    } catch (err) {
-      console.error('Failed to submit swipe', err);
-    }
 
-    // Small delay to let animation finish if triggered by button
-    setTimeout(() => {
+    setTimeout(async () => {
+      if (direction === 'like') {
+        if (currentItem.itemType === 'user') {
+          try {
+            const response = await api.post('/swipes', {
+              swiped_id: currentItem.id,
+              direction: 'like'
+            });
+            if (response.data.match) {
+              setShowMatchOverlay(true);
+            }
+          } catch (err) {
+            console.error('Swipe failed:', err);
+          }
+        } else {
+          // It's a quest - "Joining" the quest
+          try {
+            // For now, just a simple notification or placeholder for join logic
+            console.log('Requested to join quest:', currentItem.id);
+          } catch (err) {
+            console.error('Failed to join quest:', err);
+          }
+        }
+      }
+      
       setCurrentIndex(prev => prev + 1);
       setSwipeDirection(null);
-    }, 200);
+    }, 300);
   };
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-background">
-        <div className="w-12 h-12 border-4 border-surface border-t-primary rounded-full animate-spin" />
+      <div className="flex-1 flex flex-col items-center justify-center bg-obsidian">
+        <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin shadow-[0_0_20px_rgba(0,255,255,0.2)]" />
+        <p className="mt-6 text-primary font-rajdhani font-bold text-xl animate-pulse tracking-[0.2em] uppercase">
+          Scanning Network...
+        </p>
       </div>
     );
   }
 
-  if (currentIndex >= users.length) {
+  const currentItem = items[currentIndex];
+
+  if (!currentItem) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-background font-inter">
-        <div className="w-64 h-64 mb-8 bg-surface/30 rounded-full flex items-center justify-center border border-primary/10">
-           <RefreshCw size={80} className="text-primary/20 animate-spin-slow" />
+      <div className="flex-1 flex flex-col items-center justify-center bg-obsidian px-8 text-center">
+        <div className="w-24 h-24 bg-surface rounded-full flex items-center justify-center border-2 border-slate-800 mb-6">
+          <Users className="w-10 h-10 text-slate-600" />
         </div>
-        <h2 className="text-4xl font-rajdhani font-bold text-text-high mb-2 uppercase tracking-tight">No more <span className="text-primary">Quests</span>!</h2>
-        <p className="text-text-low mb-10 max-w-xs">Check back later for more collaborators in the sector.</p>
+        <h2 className="text-2xl font-rajdhani font-bold text-white uppercase tracking-tight">Zero Signals Detected</h2>
+        <p className="text-slate-400 mt-2 max-w-xs">
+          You've explored the entire sector. Broaden your search parameters or check back later.
+        </p>
         <button 
-          onClick={fetchUsers}
-          className="flex items-center gap-3 bg-primary text-background px-10 py-4 rounded-xl font-rajdhani font-bold text-xl hover:brightness-110 transition shadow-[0_0_20px_rgba(0,245,255,0.2)]"
+          onClick={() => setCurrentIndex(0)}
+          className="mt-8 px-8 py-3 bg-primary text-obsidian font-bold rounded-xl hover:bg-cyan-400 transition-all uppercase tracking-wider"
         >
-          <RefreshCw size={24} /> REFRESH SCAN
+          RESET RADAR
         </button>
       </div>
     );
   }
 
-  const currentUser = users[currentIndex];
-  const avatarUrl = currentUser.avatar_url || `/assets/avatar-gamer-${(currentIndex % 4) + 1}.jpg`;
+  const isQuest = currentItem.itemType === 'quest';
 
   return (
-    <div className="flex-1 flex flex-col p-4 relative overflow-hidden bg-background font-inter">
+    <div className="flex-1 flex flex-col items-center bg-obsidian overflow-hidden pt-4 relative">
       {/* Match Overlay */}
       <AnimatePresence>
-        {match && (
+        {showMatchOverlay && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-background/95 backdrop-blur-xl flex items-center justify-center p-6"
+            className="fixed inset-0 z-[100] bg-obsidian/90 backdrop-blur-xl flex flex-center items-center justify-center p-8"
           >
-            <div className="text-center w-full max-w-sm">
-              <motion.div 
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                className="relative mb-12"
+            <div className="text-center space-y-8 max-w-sm">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="text-6xl font-black italic text-primary font-rajdhani tracking-tighter"
               >
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-64 h-64 rounded-full bg-primary/20 blur-3xl animate-pulse" />
-                </div>
-                <div className="relative flex items-center gap-4 justify-center">
-                  <div className="w-24 h-24 rounded-full border-4 border-secondary overflow-hidden shadow-[0_0_30px_rgba(123,44,191,0.4)]">
-                    <img src="/assets/avatar-gamer-1.jpg" className="w-full h-full object-cover" alt="Me" />
-                  </div>
-                  <div className="bg-primary/20 p-4 rounded-full border border-primary/50 animate-bounce">
-                    <Heart className="w-8 h-8 text-primary" fill="currentColor" />
-                  </div>
-                  <div className="w-24 h-24 rounded-full border-4 border-primary overflow-hidden shadow-[0_0_30px_rgba(0,245,255,0.4)]">
-                    <img src={currentUser.avatar_url || `/assets/avatar-gamer-2.jpg`} className="w-full h-full object-cover" alt="Match" />
-                  </div>
-                </div>
+                IT IS A MATCH!
               </motion.div>
-
-              <h2 className="text-5xl font-rajdhani font-bold text-primary mb-2 uppercase tracking-tighter shadow-primary/20">
-                SQUAD LINKED!
-              </h2>
-              <p className="text-text-low text-lg mb-10">You and {match.username} are compatible.</p>
-              
-              <div className="flex flex-col gap-4">
+              <div className="flex justify-center -space-x-4">
+                <div className="w-32 h-32 rounded-full border-4 border-primary overflow-hidden shadow-[0_0_30px_rgba(0,255,255,0.3)]">
+                   <img src={user.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=me'} alt="" />
+                </div>
+                <div className="w-32 h-32 rounded-full border-4 border-secondary overflow-hidden shadow-[0_0_30px_rgba(255,0,255,0.3)]">
+                   <img src={currentItem.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentItem.username}`} alt="" />
+                </div>
+              </div>
+              <p className="text-white text-xl font-medium">You and <span className="text-primary">{currentItem.username}</span> have connected.</p>
+              <div className="pt-4 space-y-4">
                 <button 
-                  className="w-full py-5 bg-primary text-background rounded-2xl font-rajdhani font-bold text-xl shadow-[0_0_20px_rgba(0,245,255,0.3)] hover:brightness-110 transition"
-                  onClick={() => setMatch(null)}
+                  onClick={() => setShowMatchOverlay(false)}
+                  className="w-full py-4 bg-primary text-obsidian font-bold rounded-xl shadow-[0_0_20px_rgba(0,255,255,0.4)]"
                 >
-                  START TRANSMISSION
+                  SEND MISSION COMMAND
                 </button>
                 <button 
-                  onClick={() => setMatch(null)}
-                  className="w-full py-5 bg-surface/50 border border-background text-text-high rounded-2xl font-rajdhani font-bold text-xl hover:bg-surface transition"
+                  onClick={() => setShowMatchOverlay(false)}
+                  className="w-full py-4 border border-white/20 text-white font-medium rounded-xl"
                 >
-                  CONTINUE SEARCH
+                  KEEP SCANNING
                 </button>
               </div>
             </div>
@@ -140,7 +163,7 @@ const Discover = () => {
       <div className="flex-1 relative max-w-sm w-full mx-auto mt-4 mb-28">
         <AnimatePresence mode="popLayout">
           <motion.div
-            key={currentUser.id}
+            key={isQuest ? `quest-${currentItem.id}` : `user-${currentItem.id}`}
             drag="x"
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={1}
@@ -156,76 +179,152 @@ const Discover = () => {
               rotate: swipeDirection === 'right' ? 20 : -20,
               transition: { duration: 0.3 }
             })}
-            className="absolute inset-0 bg-surface rounded-[2.5rem] shadow-2xl overflow-hidden border border-background flex flex-col cursor-grab active:cursor-grabbing shadow-black/40"
+            className={`absolute inset-0 rounded-[2.5rem] shadow-2xl overflow-hidden border flex flex-col cursor-grab active:cursor-grabbing shadow-black/40 ${
+              isQuest ? 'border-primary/50 bg-obsidian-light' : 'border-background bg-surface'
+            }`}
           >
-            <div className="relative flex-1">
-              <img 
-                src={avatarUrl} 
-                alt={currentUser.username}
-                className="w-full h-full object-cover pointer-events-none"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-90" />
-              
-              {/* Platform Badges */}
-              <div className="absolute top-6 left-6 flex flex-wrap gap-2">
-                {currentUser.platforms?.map(platform => (
-                  <span key={platform} className="px-3 py-1 bg-surface/80 backdrop-blur-md border border-white/10 rounded-full text-[10px] font-bold text-text-high uppercase tracking-widest">
-                    {platform}
-                  </span>
-                ))}
-              </div>
+            {isQuest ? (
+              /* Quest Card Content */
+              <div className="relative flex-1 flex flex-col">
+                <div className="h-2/5 relative">
+                  <div className="absolute inset-0 bg-primary/20 animate-pulse" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-obsidian-light to-transparent" />
+                  <div className="absolute inset-0 flex items-center justify-center p-6">
+                    <div className="bg-obsidian/60 backdrop-blur-md p-4 rounded-2xl border border-primary/30 flex items-center gap-4 w-full">
+                       <div className="w-16 h-16 rounded-xl bg-primary flex items-center justify-center text-obsidian shadow-[0_0_20px_rgba(0,255,255,0.4)]">
+                         <Gamepad2 size={32} />
+                       </div>
+                       <div>
+                         <div className="text-primary text-[10px] font-bold uppercase tracking-[0.2em]">{currentItem.game_id}</div>
+                         <div className="text-white font-rajdhani font-bold text-xl leading-tight">ACTIVE MISSION</div>
+                       </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex-1 p-8 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className="px-3 py-1 bg-primary text-obsidian text-[10px] font-black uppercase rounded tracking-widest">
+                        {currentItem.quest_type}
+                      </span>
+                      <span className="px-3 py-1 border border-slate-700 text-slate-400 text-[10px] font-bold uppercase rounded tracking-widest">
+                        {currentItem.requirements?.skill_level || 'ALL LEVELS'}
+                      </span>
+                    </div>
+                    
+                    <h2 className="text-3xl font-rajdhani font-bold text-white uppercase tracking-tight leading-tight">
+                      {currentItem.title}
+                    </h2>
+                    
+                    <p className="text-slate-400 mt-4 text-sm leading-relaxed line-clamp-4 italic">
+                      \"{currentItem.description}\"
+                    </p>
+                  </div>
 
-              {/* Skill Badge */}
-              <div className="absolute top-6 right-6">
-                <span className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] shadow-lg border-2 border-background ${
-                  currentUser.skill_level === 'Pro' ? 'bg-primary text-background' :
-                  currentUser.skill_level === 'Competitive' ? 'bg-secondary text-text-high' :
-                  'bg-background text-text-low'
-                }`}>
-                  {currentUser.skill_level}
-                </span>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex items-center gap-3 p-3 bg-obsidian rounded-xl border border-slate-800">
+                        <Users className="text-primary w-5 h-5" />
+                        <div>
+                          <div className="text-[9px] text-slate-500 uppercase font-bold">Squad</div>
+                          <div className="text-white font-bold text-xs">{currentItem.filled_slots}/{currentItem.total_slots}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 p-3 bg-obsidian rounded-xl border border-slate-800">
+                        <Clock className="text-secondary w-5 h-5" />
+                        <div>
+                          <div className="text-[9px] text-slate-500 uppercase font-bold">Start</div>
+                          <div className="text-white font-bold text-xs">{currentItem.start_time}</div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-3 pt-4 border-t border-slate-800">
+                      <img 
+                        src={currentItem.creator_avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentItem.creator_name}`} 
+                        className="w-10 h-10 rounded-full border border-primary/30"
+                        alt=""
+                      />
+                      <div>
+                        <div className="text-[9px] text-slate-500 uppercase font-bold">Lead by</div>
+                        <div className="text-white font-medium text-sm">{currentItem.creator_name}</div>
+                      </div>
+                      <div className="ml-auto">
+                         <span className="text-[10px] text-primary font-bold animate-pulse">JOIN SQUAD →</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-
-              {/* User Info */}
-              <div className="absolute bottom-0 left-0 right-0 p-8">
-                <h2 className="text-4xl font-rajdhani font-bold text-text-high flex items-center gap-3 uppercase tracking-tight">
-                  {currentUser.username}
-                  <span className="text-xl font-normal text-primary">LVL 24</span>
-                </h2>
-                <p className="text-text-low text-sm mt-3 line-clamp-3 leading-relaxed">
-                  {currentUser.bio || "No bio yet. Looking for a duo partner to climb the ranks!"}
-                </p>
-                <div className="flex flex-wrap gap-2 mt-5">
-                  {currentUser.games?.map(game => (
-                    <span key={game} className="px-4 py-1.5 bg-primary/10 border border-primary/20 rounded-lg text-[10px] font-bold text-primary uppercase tracking-wider">
-                      {game}
+            ) : (
+              /* User Card Content */
+              <div className="relative flex-1">
+                <img
+                  src={currentItem.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentItem.username}`}
+                  alt={currentItem.username}
+                  className="w-full h-full object-cover pointer-events-none"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-90" />
+                
+                <div className="absolute top-6 left-6 flex flex-wrap gap-2">
+                  {(typeof currentItem.platforms === 'string' ? JSON.parse(currentItem.platforms) : currentItem.platforms)?.map(platform => (
+                    <span key={platform} className="px-3 py-1 bg-surface/80 backdrop-blur-md border border-white/10 rounded-full text-[10px] font-bold text-text-high uppercase tracking-widest">
+                      {platform}
                     </span>
                   ))}
                 </div>
+                
+                <div className="absolute top-6 right-6">
+                  <span className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] shadow-lg border-2 border-background ${
+                    currentItem.skill_level === 'Pro' ? 'bg-primary text-background' :
+                    currentItem.skill_level === 'Competitive' ? 'bg-secondary text-text-high' :
+                    'bg-background text-text-low'
+                  }`}>
+                    {currentItem.skill_level}
+                  </span>
+                </div>
+
+                <div className="absolute bottom-0 left-0 right-0 p-8">
+                  <h2 className="text-4xl font-rajdhani font-bold text-text-high flex items-center gap-3 uppercase tracking-tight">
+                    {currentItem.username}
+                    <span className="text-xl font-normal text-primary">LVL 24</span>
+                  </h2>
+                  <p className="text-text-low text-sm mt-3 line-clamp-3 leading-relaxed">
+                    {currentItem.bio || "No bio yet. Looking for a duo partner to climb the ranks!"}
+                  </p>
+                  <div className="flex flex-wrap gap-2 mt-5">
+                    {(typeof currentItem.games === 'string' ? JSON.parse(currentItem.games) : currentItem.games)?.map(game => (
+                      <span key={game} className="px-4 py-1.5 bg-primary/10 border border-primary/20 rounded-lg text-[10px] font-bold text-primary uppercase tracking-wider">
+                        {game}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
 
       {/* Action Buttons */}
       <div className="fixed bottom-32 left-0 right-0 flex justify-center items-center gap-8 z-40">
-        <button 
+        <button
           onClick={() => handleSwipe('dislike')}
           className="w-16 h-16 rounded-full bg-surface border-2 border-alert/20 flex items-center justify-center shadow-xl text-alert hover:bg-alert/10 hover:scale-110 active:scale-95 transition-all shadow-black/40"
         >
           <X size={32} strokeWidth={3} />
         </button>
-        
-        <button 
+        <button
           className="w-12 h-12 rounded-full bg-surface border-2 border-secondary/20 flex items-center justify-center shadow-xl text-secondary hover:bg-secondary/10 hover:scale-110 active:scale-95 transition-all shadow-black/40"
         >
           <Star size={24} fill="currentColor" />
         </button>
-
-        <button 
+        <button
           onClick={() => handleSwipe('like')}
-          className="w-16 h-16 rounded-full bg-surface border-2 border-primary/20 flex items-center justify-center shadow-xl text-primary hover:bg-primary/10 hover:scale-110 active:scale-95 transition-all shadow-black/40 shadow-primary/10"
+          className={`w-16 h-16 rounded-full bg-surface border-2 flex items-center justify-center shadow-xl hover:scale-110 active:scale-95 transition-all shadow-black/40 shadow-primary/10 ${
+            isQuest ? 'border-primary text-primary' : 'border-primary/20 text-primary'
+          }`}
         >
           <Heart size={32} fill="currentColor" strokeWidth={3} />
         </button>

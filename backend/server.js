@@ -18,6 +18,7 @@ const initDB = async () => {
     await db.run('CREATE TABLE IF NOT EXISTS swipes (id INTEGER PRIMARY KEY AUTOINCREMENT, swiper_id TEXT NOT NULL, swiped_id TEXT NOT NULL, direction TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(swiper_id) REFERENCES users(id), FOREIGN KEY(swiped_id) REFERENCES users(id), UNIQUE(swiper_id, swiped_id))');
     await db.run('CREATE TABLE IF NOT EXISTS matches (id INTEGER PRIMARY KEY AUTOINCREMENT, user1_id TEXT NOT NULL, user2_id TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(user1_id) REFERENCES users(id), FOREIGN KEY(user2_id) REFERENCES users(id), UNIQUE(user1_id, user2_id))');
     await db.run('CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT, match_id INTEGER NOT NULL, sender_id TEXT NOT NULL, content TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(match_id) REFERENCES matches(id), FOREIGN KEY(sender_id) REFERENCES users(id))');
+    await db.run('CREATE TABLE IF NOT EXISTS quests (id TEXT PRIMARY KEY, creator_id TEXT NOT NULL, game_id TEXT NOT NULL, quest_type TEXT NOT NULL, title TEXT NOT NULL, description TEXT, requirements TEXT, start_time TEXT, total_slots INTEGER NOT NULL, filled_slots INTEGER DEFAULT 1, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(creator_id) REFERENCES users(id))');
     console.log('Database tables verified/created');
   } catch (error) {
     console.error('Failed to initialize database tables:', error);
@@ -177,6 +178,68 @@ app.post('/api/matches/:match_id/messages', authenticateToken, async (req, res) 
     res.status(201).json({ message: 'Message sent' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to send message' });
+  }
+});
+
+// Quest Routes
+app.post('/api/quests', authenticateToken, async (req, res) => {
+  const { game_id, quest_type, title, description, requirements, start_time, total_slots } = req.body;
+  if (!game_id || !quest_type || !title || !total_slots) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  try {
+    const id = uuidv4();
+    await db.run(
+      'INSERT INTO quests (id, creator_id, game_id, quest_type, title, description, requirements, start_time, total_slots) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, req.user.id, game_id, quest_type, title, description, JSON.stringify(requirements), start_time, total_slots]
+    );
+    res.status(201).json({ message: 'Quest created', id });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to create quest' });
+  }
+});
+
+app.get('/api/quests', async (req, res) => {
+  try {
+    const quests = await db.run(`
+      SELECT q.*, u.username as creator_name, u.avatar_url as creator_avatar 
+      FROM quests q
+      JOIN users u ON q.creator_id = u.id
+      ORDER BY q.created_at DESC
+    `);
+    
+    const parsed = quests.map(q => ({
+      ...q,
+      requirements: q.requirements ? JSON.parse(q.requirements) : {}
+    }));
+    
+    res.json(parsed);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch quests' });
+  }
+});
+
+app.get('/api/quests/:id', async (req, res) => {
+  try {
+    const quests = await db.run(`
+      SELECT q.*, u.username as creator_name, u.avatar_url as creator_avatar 
+      FROM quests q
+      JOIN users u ON q.creator_id = u.id
+      WHERE q.id = ?
+    `, [req.params.id]);
+    
+    if (quests.length === 0) return res.status(404).json({ error: 'Quest not found' });
+    
+    const quest = {
+      ...quests[0],
+      requirements: quests[0].requirements ? JSON.parse(quests[0].requirements) : {}
+    };
+    
+    res.json(quest);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch quest' });
   }
 });
 

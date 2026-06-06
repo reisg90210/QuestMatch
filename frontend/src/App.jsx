@@ -7,6 +7,7 @@ import Landing from './pages/Landing';
 import Discover from './pages/Discover';
 import Matches from './pages/Matches';
 import Profile from './pages/Profile';
+import CreateQuest from './pages/CreateQuest';
 import Navbar from './components/Navbar';
 
 const PublicRoute = ({ children }) => {
@@ -37,6 +38,7 @@ function App() {
                     <Route path="/discover" element={<Discover />} />
                     <Route path="/matches" element={<Matches />} />
                     <Route path="/profile" element={<Profile />} />
+                    <Route path="/create-quest" element={<CreateQuest />} />
                     <Route path="/" element={<Navigate to="/discover" replace />} />
                   </Routes>
                   <Navbar />

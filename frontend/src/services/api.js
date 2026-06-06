@@ -40,4 +40,10 @@ export const matches = {
   sendMessage: (matchId, content) => api.post(`/matches/${matchId}/messages`, { content }),
 };
 
+export const quests = {
+  create: (data) => api.post('/quests', data),
+  list: () => api.get('/quests'),
+  getById: (id) => api.get(`/quests/${id}`),
+};
+
 export default api;
