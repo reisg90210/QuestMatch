@@ -1,0 +1,29 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Controller Body Backdrop for depth -->
+  <rect x="80" y="140" width="352" height="220" rx="60" fill="#0B0C10" />
+  
+  <!-- Main Controller Path -->
+  <path d="M120 160H392C440 160 460 200 460 250V330C460 380 430 420 380 420H340C310 420 300 400 290 380H222C212 400 202 420 172 420H132C82 420 52 380 52 330V250C52 200 72 160 120 160Z" fill="#1F2833" stroke="#00F5FF" stroke-width="12"/>
+  
+  <!-- D-Pad (Left) -->
+  <rect x="120" y="240" width="60" height="20" rx="4" fill="#E1E1E1" />
+  <rect x="140" y="220" width="20" height="60" rx="4" fill="#E1E1E1" />
+  
+  <!-- Action Buttons (Right) -->
+  <circle cx="350" cy="230" r="12" fill="#E1E1E1" />
+  <circle cx="390" cy="250" r="12" fill="#E1E1E1" />
+  <circle cx="350" cy="270" r="12" fill="#E1E1E1" />
+  <circle cx="310" cy="250" r="12" fill="#E1E1E1" />
+  
+  <!-- Analog Sticks -->
+  <circle cx="190" cy="320" r="30" fill="#0B0C10" stroke="#7B2CBF" stroke-width="4"/>
+  <circle cx="322" cy="320" r="30" fill="#0B0C10" stroke="#7B2CBF" stroke-width="4"/>
+  
+  <!-- Heart Logo in Center (QuestMatch Identity) -->
+  <path d="M256 270C256 270 216 230 216 200C216 185 226 175 241 175C249 175 256 180 256 180C256 180 263 175 271 175C286 175 296 185 296 200C296 230 256 270 256 270Z" fill="#00F5FF">
+    <animate attributeName="opacity" values="0.8;1;0.8" dur="2s" repeatCount="indefinite" />
+  </path>
+  
+  <!-- Brand Name Placeholder text (Optional in Logo) -->
+  <text x="256" y="480" font-family="Rajdhani, sans-serif" font-size="48" font-weight="bold" fill="#00F5FF" text-anchor="middle">QUESTMATCH</text>
+</svg>

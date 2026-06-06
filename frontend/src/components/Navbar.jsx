@@ -7,13 +7,13 @@ const Navbar = () => {
   const currentPath = location.pathname;
 
   const navItems = [
-    { icon: Compass, label: 'Discover', path: '/' },
+    { icon: Compass, label: 'Discover', path: '/discover' },
     { icon: Heart, label: 'Matches', path: '/matches' },
     { icon: User, label: 'Profile', path: '/profile' }
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-[#14141f]/95 backdrop-blur-lg border-t border-[#2a2a3e] flex justify-around items-center h-20 px-6 z-50">
+    <nav className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-lg border-t border-surface flex justify-around items-center h-20 px-6 z-50">
       {navItems.map((item) => {
         const isActive = currentPath === item.path;
         return (
@@ -21,16 +21,19 @@ const Navbar = () => {
             key={item.path}
             to={item.path} 
             className={`flex flex-col items-center gap-1 transition-all duration-300 ${
-              isActive ? 'text-[#7c3aed] scale-110' : 'text-[#64748b] hover:text-[#94a3b8]'
+              isActive ? 'text-primary scale-110' : 'text-text-low hover:text-text-high'
             }`}
           >
             <div className="relative p-1">
+              {isActive && (
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full shadow-[0_0_10px_rgba(0,245,255,0.8)]" />
+              )}
               <item.icon size={26} strokeWidth={isActive ? 2.5 : 2} />
               {item.label === 'Matches' && (
-                <div className="absolute top-0 right-0 w-3 h-3 bg-[#ec4899] rounded-full border-2 border-[#14141f]" />
+                <div className="absolute top-0 right-0 w-3 h-3 bg-alert rounded-full border-2 border-background" />
               )}
             </div>
-            <span className={`text-[10px] font-black uppercase tracking-widest ${isActive ? 'opacity-100' : 'opacity-60'}`}>
+            <span className={`text-[10px] font-black uppercase tracking-widest font-rajdhani ${isActive ? 'opacity-100' : 'opacity-60'}`}>
               {item.label}
             </span>
           </NavLink>
