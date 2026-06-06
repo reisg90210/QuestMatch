@@ -5,29 +5,26 @@ export default {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#7c3aed', // purple-600
-          light: '#a78bfa',
-          dark: '#5b21b6',
+          DEFAULT: '#00F5FF', // Electric Cyan
+          light: '#66F9FF',
+          dark: '#00C2CC',
         },
         secondary: {
-          DEFAULT: '#06b6d4', // cyan-500
-          light: '#22d3ee',
-          dark: '#0891b2',
+          DEFAULT: '#7B2CBF', // Deep Purple
+          light: '#9D4EDD',
+          dark: '#5A189A',
         },
-        accent: {
-          pink: '#ec4899',
-          green: '#10b981',
-          red: '#ef4444',
+        background: '#0B0C10', // Obsidian
+        surface: '#1F2833',    // Dark Slate
+        text: {
+          high: '#E1E1E1',     // Frost White
+          low: '#C5C6C7',      // Silver
         },
-        dark: {
-          DEFAULT: '#0a0a0f',
-          card: '#1a1a2e',
-          surface: '#14141f',
-          input: '#1e1e32',
-          border: '#2a2a3e',
-        }
+        alert: '#FF006E',      // Neon Rose
       },
       fontFamily: {
+        rajdhani: ['Rajdhani', 'sans-serif'],
+        inter: ['Inter', 'sans-serif'],
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
       },
       borderRadius: {

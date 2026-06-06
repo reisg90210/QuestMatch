@@ -84,25 +84,25 @@ const Profile = () => {
     }));
   };
 
-  if (loading) return <div className="flex-1 bg-[#0a0a0f] flex items-center justify-center"><div className="w-10 h-10 border-4 border-[#2a2a3e] border-t-[#7c3aed] rounded-full animate-spin" /></div>;
+  if (loading) return <div className="flex-1 bg-background flex items-center justify-center"><div className="w-10 h-10 border-4 border-surface border-t-primary rounded-full animate-spin" /></div>;
 
   return (
-    <div className="flex-1 bg-[#0a0a0f] overflow-y-auto pb-28">
+    <div className="flex-1 bg-background overflow-y-auto pb-28 font-inter">
       {/* Header with Background */}
-      <div className="relative h-48 bg-gradient-to-r from-[#7c3aed] to-[#06b6d4]">
-        <div className="absolute inset-0 bg-black/20" />
+      <div className="relative h-56 bg-gradient-to-br from-secondary via-background to-primary/20">
+        <div className="absolute inset-0 bg-background/40" />
         <button 
           onClick={logout}
-          className="absolute top-4 right-4 bg-black/40 backdrop-blur-md p-2 rounded-full text-white hover:bg-black/60 transition"
+          className="absolute top-4 right-4 bg-surface/80 backdrop-blur-md p-2.5 rounded-full text-text-high hover:text-alert transition-colors border border-white/5"
         >
           <LogOut size={20} />
         </button>
       </div>
 
       {/* Profile Avatar */}
-      <div className="relative flex justify-center -mt-16 px-6">
+      <div className="relative flex justify-center -mt-20 px-6">
         <div className="relative">
-          <div className="w-32 h-32 rounded-[2.5rem] border-4 border-[#0a0a0f] overflow-hidden bg-[#1a1a2e] shadow-2xl">
+          <div className="w-40 h-40 rounded-full border-4 border-background overflow-hidden bg-surface shadow-[0_0_40px_rgba(0,0,0,0.5)]">
             <img 
               src={profile.avatar_url || `/assets/avatar-gamer-1.jpg`} 
               className="w-full h-full object-cover" 
@@ -111,82 +111,47 @@ const Profile = () => {
           </div>
           <button 
             onClick={() => setIsPickerOpen(true)}
-            className="absolute bottom-0 right-0 bg-[#7c3aed] p-2.5 rounded-2xl border-4 border-[#0a0a0f] text-white shadow-lg hover:scale-110 transition-transform"
+            className="absolute bottom-2 right-2 bg-primary p-3 rounded-full border-4 border-background text-background shadow-lg hover:scale-110 transition-transform"
           >
-            <Camera size={18} />
+            <Camera size={20} />
           </button>
         </div>
       </div>
 
-      {/* Avatar Picker Modal */}
-      {isPickerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
-          <div className="bg-[#1a1a2e] w-full max-w-sm rounded-3xl p-6 border border-[#2a2a3e] shadow-2xl">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-white font-black uppercase tracking-tight">Select Avatar</h2>
-              <button onClick={() => setIsPickerOpen(false)} className="text-[#64748b] hover:text-white">
-                <X size={24} />
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              {avatars.map((url) => (
-                <button
-                  key={url}
-                  onClick={() => {
-                    setProfile({ ...profile, avatar_url: url });
-                    setIsPickerOpen(false);
-                  }}
-                  className={`relative aspect-square rounded-2xl overflow-hidden border-4 transition-all ${
-                    profile.avatar_url === url ? 'border-[#7c3aed] scale-95' : 'border-transparent opacity-60 grayscale hover:opacity-100 hover:grayscale-0'
-                  }`}
-                >
-                  <img src={url} className="w-full h-full object-cover" alt="Gamer Avatar" />
-                  {profile.avatar_url === url && (
-                    <div className="absolute inset-0 bg-[#7c3aed]/20 flex items-center justify-center">
-                      <Check className="text-white" size={32} strokeWidth={4} />
-                    </div>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="px-6 mt-4 text-center">
-        <h1 className="text-2xl font-black text-white italic uppercase tracking-tight">{user?.username || 'Gamer'}</h1>
-        <p className="text-[#64748b] text-sm font-medium">Lvl 24 • Pro Matchmaking</p>
+      <div className="px-6 mt-6 text-center">
+        <h1 className="text-4xl font-rajdhani font-bold text-primary uppercase tracking-tight">{user?.username || 'Gamer'}</h1>
+        <p className="text-text-low text-sm font-medium mt-1">LVL 24 • LEGENDARY EXPLORER</p>
       </div>
 
       {/* Form Content */}
-      <div className="px-6 mt-10 space-y-8 max-w-lg mx-auto">
+      <div className="px-6 mt-12 space-y-12 max-w-lg mx-auto">
         {message && (
-          <div className="bg-[#10b981]/10 text-[#10b981] p-4 rounded-2xl text-sm border border-[#10b981]/20 flex items-center gap-3 animate-bounce">
+          <div className="bg-primary/10 text-primary p-4 rounded-2xl text-sm border border-primary/20 flex items-center gap-3 animate-fade-up">
             <Check size={18} /> {message}
           </div>
         )}
 
-        <section className="space-y-3">
-          <h3 className="text-[#94a3b8] text-xs font-black uppercase tracking-[0.2em]">Bio</h3>
+        <section className="space-y-4">
+          <h3 className="text-text-low text-xs font-bold uppercase tracking-[0.3em] font-rajdhani">Biography</h3>
           <textarea
-            className="w-full px-5 py-4 bg-[#1e1e32] border border-[#2a2a3e] rounded-2xl text-[#f1f5f9] placeholder:text-[#64748b] focus:outline-none focus:border-[#7c3aed] transition-colors min-h-[120px] text-sm leading-relaxed"
+            className="w-full px-5 py-4 bg-surface border border-background rounded-2xl text-text-high placeholder:text-text-low focus:outline-none focus:border-primary transition-colors min-h-[120px] text-sm leading-relaxed shadow-inner"
             value={profile.bio}
             onChange={(e) => setProfile({...profile, bio: e.target.value})}
             placeholder="Introduce yourself to the lobby..."
           />
         </section>
 
-        <section className="space-y-3">
-          <h3 className="text-[#94a3b8] text-xs font-black uppercase tracking-[0.2em]">Skill Level</h3>
+        <section className="space-y-4">
+          <h3 className="text-text-low text-xs font-bold uppercase tracking-[0.3em] font-rajdhani">Skill Level</h3>
           <div className="grid grid-cols-3 gap-3">
             {['Casual', 'Competitive', 'Pro'].map(level => (
               <button
                 key={level}
                 onClick={() => setProfile({...profile, skill_level: level})}
-                className={`py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all border-2 ${
+                className={`py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border-2 ${
                   profile.skill_level === level 
-                    ? 'bg-[#7c3aed] border-[#7c3aed] text-white shadow-[0_0_15px_rgba(124,58,237,0.4)]' 
-                    : 'bg-[#14141f] border-[#2a2a3e] text-[#64748b] hover:border-[#7c3aed]/50'
+                    ? 'bg-primary border-primary text-background shadow-[0_0_20px_rgba(0,245,255,0.3)]' 
+                    : 'bg-surface border-background text-text-low hover:border-primary/50'
                 }`}
               >
                 {level}
@@ -195,17 +160,17 @@ const Profile = () => {
           </div>
         </section>
 
-        <section className="space-y-3">
-          <h3 className="text-[#94a3b8] text-xs font-black uppercase tracking-[0.2em]">Platforms</h3>
+        <section className="space-y-4">
+          <h3 className="text-text-low text-xs font-bold uppercase tracking-[0.3em] font-rajdhani">Deployment Platforms</h3>
           <div className="flex flex-wrap gap-2">
             {allPlatforms.map(p => (
               <button
                 key={p}
                 onClick={() => togglePlatform(p)}
-                className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${
+                className={`px-5 py-2.5 rounded-full text-xs font-bold transition-all border ${
                   profile.platforms.includes(p) 
-                    ? 'bg-[#06b6d4]/10 border-[#06b6d4] text-[#22d3ee]' 
-                    : 'bg-[#14141f] border-[#2a2a3e] text-[#64748b]'
+                    ? 'bg-primary/20 border-primary text-primary' 
+                    : 'bg-surface border-background text-text-low'
                 }`}
               >
                 {p}
@@ -214,43 +179,64 @@ const Profile = () => {
           </div>
         </section>
 
-        <section className="space-y-3">
-          <h3 className="text-[#94a3b8] text-xs font-black uppercase tracking-[0.2em]">Favorite Games</h3>
-          <div className="overflow-x-auto scrollbar-hide -mx-6 px-6">
-            <div className="flex gap-4 pb-2">
+        <section className="space-y-4">
+          <h3 className="text-text-low text-xs font-bold uppercase tracking-[0.3em] font-rajdhani">Combat Library</h3>
+          <div className="grid grid-cols-2 gap-4">
               {allGames.map(game => {
                 const isSelected = profile.games.includes(game.id);
                 return (
                   <div
                     key={game.id}
-                    className={`relative flex-shrink-0 w-36 h-48 rounded-2xl overflow-hidden border-2 cursor-pointer transition-all ${
-                      isSelected ? 'border-[#7c3aed] scale-105 shadow-[0_0_20px_rgba(124,58,237,0.3)]' : 'border-[#2a2a3e]'
+                    className={`relative aspect-[4/5] rounded-2xl overflow-hidden border-2 cursor-pointer transition-all ${
+                      isSelected ? 'border-primary scale-105 shadow-[0_0_20px_rgba(0,245,255,0.2)]' : 'border-background grayscale hover:grayscale-0'
                     }`}
                     onClick={() => toggleGame(game.id)}
                   >
                     <img src={game.thumb} className="w-full h-full object-cover" alt={game.name} />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                    <div className="absolute bottom-0 left-0 right-0 p-3">
-                      <p className="text-white font-bold text-xs leading-tight">{game.name}</p>
+                    <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-4">
+                      <p className="text-text-high font-rajdhani font-bold text-sm leading-tight uppercase tracking-tight">{game.name}</p>
                     </div>
                     {isSelected && (
-                      <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-[#7c3aed] flex items-center justify-center border-2 border-white/20">
-                        <Check className="w-3 h-3 text-white" strokeWidth={4} />
+                      <div className="absolute top-2 right-2 w-7 h-7 rounded-full bg-primary flex items-center justify-center border-2 border-background shadow-lg">
+                        <Check className="w-4 h-4 text-background" strokeWidth={4} />
                       </div>
                     )}
                   </div>
                 );
               })}
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <h3 className="text-text-low text-xs font-bold uppercase tracking-[0.3em] font-rajdhani">Operational Availability</h3>
+          <div className="bg-surface p-4 rounded-2xl border border-background">
+            <div className="grid grid-cols-8 gap-1 text-[10px] text-text-low font-bold uppercase mb-2">
+              <div />
+              {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(d => <div key={d} className="text-center">{d}</div>)}
             </div>
+            {['Morning', 'Afternoon', 'Evening'].map(time => (
+              <div key={time} className="grid grid-cols-8 gap-1 items-center mb-1">
+                <div className="text-[10px] text-text-low font-bold uppercase pr-2">{time.slice(0,3)}</div>
+                {Array.from({ length: 7 }).map((_, i) => (
+                  <div 
+                    key={i} 
+                    className={`aspect-square rounded-sm border border-background/50 cursor-pointer transition-colors ${
+                      (i + time.length) % 3 === 0 ? 'bg-primary shadow-[0_0_5px_rgba(0,245,255,0.4)]' : 'bg-background/40 hover:bg-surface-light/20'
+                    }`}
+                  />
+                ))}
+              </div>
+            ))}
           </div>
         </section>
 
         <button
           onClick={handleSave}
           disabled={saving}
-          className="w-full py-4 bg-gradient-to-r from-[#7c3aed] to-[#06b6d4] rounded-2xl text-white font-black text-lg uppercase tracking-widest hover:opacity-90 transition shadow-xl shadow-purple-500/20 flex items-center justify-center gap-3 mt-10"
+          className="w-full py-5 bg-primary text-background rounded-2xl font-rajdhani font-bold text-xl uppercase tracking-widest hover:brightness-110 transition shadow-[0_0_30px_rgba(0,245,255,0.2)] flex items-center justify-center gap-3 mt-10"
         >
-          {saving ? <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Save size={22} /> Update Profile</>}
+          {saving ? <div className="w-6 h-6 border-2 border-background/30 border-t-background rounded-full animate-spin" /> : <><Save size={22} /> Sync Profile</>}
         </button>
       </div>
     </div>
