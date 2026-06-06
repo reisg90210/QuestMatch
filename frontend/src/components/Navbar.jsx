@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Compass, Heart, User, MessageCircle } from 'lucide-react';
+import { Compass, Heart, User, MessageCircle, PlusCircle } from 'lucide-react';
 
 const Navbar = () => {
   const location = useLocation();
@@ -8,6 +8,7 @@ const Navbar = () => {
 
   const navItems = [
     { icon: Compass, label: 'Discover', path: '/discover' },
+    { icon: PlusCircle, label: 'Create', path: '/create-quest' },
     { icon: Heart, label: 'Matches', path: '/matches' },
     { icon: User, label: 'Profile', path: '/profile' }
   ];
