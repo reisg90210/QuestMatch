@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { Heart, X, Star, Users, Gamepad2, Clock, Trophy } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -11,6 +11,10 @@ const Discover = () => {
   const [loading, setLoading] = useState(true);
   const [swipeDirection, setSwipeDirection] = useState(null);
   const [showMatchOverlay, setShowMatchOverlay] = useState(false);
+  
+  const x = useMotionValue(0);
+  const likeOpacity = useTransform(x, [20, 100], [0, 1]);
+  const dislikeOpacity = useTransform(x, [-100, -20], [1, 0]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -74,13 +78,14 @@ const Discover = () => {
       
       setCurrentIndex(prev => prev + 1);
       setSwipeDirection(null);
+      x.set(0);
     }, 300);
   };
 
   if (loading) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-obsidian">
-        <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin shadow-[0_0_20px_rgba(0,255,255,0.2)]" />
+      <div className="flex-1 flex flex-col items-center justify-center bg-background">
+        <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin shadow-[0_0_20px_rgba(0,245,255,0.2)]" />
         <p className="mt-6 text-primary font-rajdhani font-bold text-xl animate-pulse tracking-[0.2em] uppercase">
           Scanning Network...
         </p>
@@ -92,7 +97,7 @@ const Discover = () => {
 
   if (!currentItem) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-obsidian px-8 text-center">
+      <div className="flex-1 min-h-[70vh] flex flex-col items-center justify-center bg-background px-8 text-center">
         <div className="w-24 h-24 bg-surface rounded-full flex items-center justify-center border-2 border-slate-800 mb-6">
           <Users className="w-10 h-10 text-slate-600" />
         </div>
@@ -102,7 +107,7 @@ const Discover = () => {
         </p>
         <button 
           onClick={() => setCurrentIndex(0)}
-          className="mt-8 px-8 py-3 bg-primary text-obsidian font-bold rounded-xl hover:bg-cyan-400 transition-all uppercase tracking-wider"
+          className="mt-8 px-8 py-3 bg-primary text-background font-bold rounded-xl hover:bg-cyan-400 transition-all uppercase tracking-wider"
         >
           RESET RADAR
         </button>
@@ -113,7 +118,7 @@ const Discover = () => {
   const isQuest = currentItem.itemType === 'quest';
 
   return (
-    <div className="flex-1 flex flex-col items-center bg-obsidian overflow-hidden pt-4 relative">
+    <div className="flex-1 flex flex-col items-center bg-background overflow-hidden pt-4 relative">
       {/* Match Overlay */}
       <AnimatePresence>
         {showMatchOverlay && (
@@ -121,7 +126,7 @@ const Discover = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-obsidian/90 backdrop-blur-xl flex flex-center items-center justify-center p-8"
+            className="fixed inset-0 z-[100] bg-background/90 backdrop-blur-xl flex flex-center items-center justify-center p-8"
           >
             <div className="text-center space-y-8 max-w-sm">
               <motion.div
@@ -143,7 +148,7 @@ const Discover = () => {
               <div className="pt-4 space-y-4">
                 <button 
                   onClick={() => setShowMatchOverlay(false)}
-                  className="w-full py-4 bg-primary text-obsidian font-bold rounded-xl shadow-[0_0_20px_rgba(0,255,255,0.4)]"
+                  className="w-full py-4 bg-primary text-background font-bold rounded-xl shadow-[0_0_20px_rgba(0,255,255,0.4)]"
                 >
                   SEND MISSION COMMAND
                 </button>
@@ -160,16 +165,18 @@ const Discover = () => {
       </AnimatePresence>
 
       {/* Swipe Card Area */}
-      <div className="flex-1 relative max-w-sm w-full mx-auto mt-4 mb-28">
+      <div className="flex-1 relative w-[90%] max-w-[400px] mx-auto mt-4 mb-28">
         <AnimatePresence mode="popLayout">
           <motion.div
             key={isQuest ? `quest-${currentItem.id}` : `user-${currentItem.id}`}
+            style={{ x }}
             drag="x"
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={1}
             onDragEnd={(e, info) => {
               if (info.offset.x > 100) handleSwipe('like');
               else if (info.offset.x < -100) handleSwipe('dislike');
+              else x.set(0);
             }}
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -179,10 +186,24 @@ const Discover = () => {
               rotate: swipeDirection === 'right' ? 20 : -20,
               transition: { duration: 0.3 }
             })}
-            className={`absolute inset-0 rounded-[2.5rem] shadow-2xl overflow-hidden border flex flex-col cursor-grab active:cursor-grabbing shadow-black/40 ${
-              isQuest ? 'border-primary/50 bg-obsidian-light' : 'border-background bg-surface'
+            className={`absolute inset-0 rounded-[2.5rem] shadow-2xl overflow-hidden border flex flex-col cursor-grab active:cursor-grabbing shadow-black/40 touch-pan-y ${
+              isQuest ? 'border-primary/50 bg-surface' : 'border-background bg-surface'
             }`}
           >
+            {/* Swipe Hints */}
+            <motion.div 
+              style={{ opacity: likeOpacity }} 
+              className="absolute top-20 right-10 z-50 border-4 border-primary px-4 py-2 rounded-xl rotate-[-15deg] pointer-events-none"
+            >
+              <span className="text-primary text-4xl font-black font-rajdhani uppercase">JOIN</span>
+            </motion.div>
+            <motion.div 
+              style={{ opacity: dislikeOpacity }} 
+              className="absolute top-20 left-10 z-50 border-4 border-alert px-4 py-2 rounded-xl rotate-[15deg] pointer-events-none"
+            >
+              <span className="text-alert text-4xl font-black font-rajdhani uppercase">SKIP</span>
+            </motion.div>
+
             {isQuest ? (
               /* Quest Card Content */
               <div className="relative flex-1 flex flex-col">

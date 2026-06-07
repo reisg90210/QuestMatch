@@ -93,34 +93,35 @@ const Profile = () => {
         <div className="absolute inset-0 bg-background/40" />
         <button 
           onClick={logout}
-          className="absolute top-4 right-4 bg-surface/80 backdrop-blur-md p-2.5 rounded-full text-text-high hover:text-alert transition-colors border border-white/5"
+          className="absolute top-4 right-4 bg-surface/80 backdrop-blur-md p-3.5 rounded-full text-text-high hover:text-alert transition-colors border border-white/5"
         >
           <LogOut size={20} />
         </button>
       </div>
 
-      {/* Profile Avatar */}
-      <div className="relative flex justify-center -mt-20 px-6">
-        <div className="relative">
-          <div className="w-40 h-40 rounded-full border-4 border-background overflow-hidden bg-surface shadow-[0_0_40px_rgba(0,0,0,0.5)]">
-            <img 
-              src={profile.avatar_url || `/assets/avatar-gamer-1.jpg`} 
-              className="w-full h-full object-cover" 
-              alt="Avatar" 
-            />
+      {/* Profile Avatar & Identity */}
+      <div className="relative px-6 -mt-10 md:-mt-20 max-w-lg mx-auto">
+        <div className="flex flex-col md:flex-row items-center md:items-end gap-4 md:gap-6">
+          <div className="relative">
+            <div className="w-20 h-20 md:w-40 md:h-40 rounded-full border-4 border-background overflow-hidden bg-surface shadow-[0_0_40px_rgba(0,0,0,0.5)]">
+              <img 
+                src={profile.avatar_url || `/assets/avatar-gamer-1.jpg`} 
+                className="w-full h-full object-cover" 
+                alt="Avatar" 
+              />
+            </div>
+            <button 
+              onClick={() => setIsPickerOpen(true)}
+              className="absolute bottom-0 right-0 md:bottom-2 md:right-2 bg-primary p-2 md:p-3 rounded-full border-4 border-background text-background shadow-lg hover:scale-110 transition-transform"
+            >
+              <Camera size={16} className="md:w-5 md:h-5" />
+            </button>
           </div>
-          <button 
-            onClick={() => setIsPickerOpen(true)}
-            className="absolute bottom-2 right-2 bg-primary p-3 rounded-full border-4 border-background text-background shadow-lg hover:scale-110 transition-transform"
-          >
-            <Camera size={20} />
-          </button>
+          <div className="text-center md:text-left pb-2">
+            <h1 className="text-3xl md:text-4xl font-rajdhani font-bold text-primary uppercase tracking-tight">{user?.username || 'Gamer'}</h1>
+            <p className="text-text-low text-[10px] md:text-sm font-medium mt-1 uppercase tracking-widest">LVL 24 • LEGENDARY EXPLORER</p>
+          </div>
         </div>
-      </div>
-
-      <div className="px-6 mt-6 text-center">
-        <h1 className="text-4xl font-rajdhani font-bold text-primary uppercase tracking-tight">{user?.username || 'Gamer'}</h1>
-        <p className="text-text-low text-sm font-medium mt-1">LVL 24 • LEGENDARY EXPLORER</p>
       </div>
 
       {/* Form Content */}
@@ -134,7 +135,7 @@ const Profile = () => {
         <section className="space-y-4">
           <h3 className="text-text-low text-xs font-bold uppercase tracking-[0.3em] font-rajdhani">Biography</h3>
           <textarea
-            className="w-full px-5 py-4 bg-surface border border-background rounded-2xl text-text-high placeholder:text-text-low focus:outline-none focus:border-primary transition-colors min-h-[120px] text-sm leading-relaxed shadow-inner"
+            className="w-full px-5 py-4 bg-surface border border-background rounded-2xl text-text-high text-base placeholder:text-text-low focus:outline-none focus:border-primary transition-colors min-h-[120px] leading-relaxed shadow-inner"
             value={profile.bio}
             onChange={(e) => setProfile({...profile, bio: e.target.value})}
             placeholder="Introduce yourself to the lobby..."
@@ -181,14 +182,14 @@ const Profile = () => {
 
         <section className="space-y-4">
           <h3 className="text-text-low text-xs font-bold uppercase tracking-[0.3em] font-rajdhani">Combat Library</h3>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {allGames.map(game => {
                 const isSelected = profile.games.includes(game.id);
                 return (
                   <div
                     key={game.id}
-                    className={`relative aspect-[4/5] rounded-2xl overflow-hidden border-2 cursor-pointer transition-all ${
-                      isSelected ? 'border-primary scale-105 shadow-[0_0_20px_rgba(0,245,255,0.2)]' : 'border-background grayscale hover:grayscale-0'
+                    className={`relative aspect-[16/9] sm:aspect-[4/5] rounded-2xl overflow-hidden border-2 cursor-pointer transition-all ${
+                      isSelected ? 'border-primary scale-[1.02] shadow-[0_0_20px_rgba(0,245,255,0.2)]' : 'border-background grayscale hover:grayscale-0'
                     }`}
                     onClick={() => toggleGame(game.id)}
                   >
@@ -210,7 +211,9 @@ const Profile = () => {
 
         <section className="space-y-4">
           <h3 className="text-text-low text-xs font-bold uppercase tracking-[0.3em] font-rajdhani">Operational Availability</h3>
-          <div className="bg-surface p-4 rounded-2xl border border-background">
+          
+          {/* Desktop Grid */}
+          <div className="hidden sm:block bg-surface p-4 rounded-2xl border border-background">
             <div className="grid grid-cols-8 gap-1 text-[10px] text-text-low font-bold uppercase mb-2">
               <div />
               {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(d => <div key={d} className="text-center">{d}</div>)}
@@ -226,6 +229,30 @@ const Profile = () => {
                     }`}
                   />
                 ))}
+              </div>
+            ))}
+          </div>
+
+          {/* Mobile Daily List */}
+          <div className="sm:hidden space-y-3">
+            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, i) => (
+              <div key={day} className="bg-surface p-3 rounded-xl border border-background flex items-center justify-between">
+                <span className="text-text-high font-rajdhani font-bold text-sm uppercase tracking-wide w-12">{day}</span>
+                <div className="flex gap-2 flex-1 justify-end">
+                   {['Morning', 'Afternoon', 'Evening'].map((time, j) => {
+                      const isActive = (i + time.length) % 3 === 0;
+                      return (
+                        <button 
+                          key={time}
+                          className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-tighter border transition-all ${
+                            isActive ? 'bg-primary text-background border-primary shadow-[0_0_10px_rgba(0,245,255,0.4)]' : 'bg-background text-text-low border-white/5'
+                          }`}
+                        >
+                          {time.slice(0,1)}
+                        </button>
+                      );
+                   })}
+                </div>
               </div>
             ))}
           </div>

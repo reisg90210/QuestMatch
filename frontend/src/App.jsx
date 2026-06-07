@@ -8,6 +8,8 @@ import Discover from './pages/Discover';
 import Matches from './pages/Matches';
 import Profile from './pages/Profile';
 import CreateQuest from './pages/CreateQuest';
+import Notifications from './pages/Notifications';
+import SquadManagement from './pages/SquadManagement';
 import Navbar from './components/Navbar';
 
 const PublicRoute = ({ children }) => {
@@ -39,6 +41,8 @@ function App() {
                     <Route path="/matches" element={<Matches />} />
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/create-quest" element={<CreateQuest />} />
+                    <Route path="/notifications" element={<Notifications />} />
+                    <Route path="/squad-management" element={<SquadManagement />} />
                     <Route path="/" element={<Navigate to="/discover" replace />} />
                   </Routes>
                   <Navbar />
