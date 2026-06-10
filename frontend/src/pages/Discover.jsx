@@ -97,17 +97,18 @@ const Discover = () => {
 
   if (!currentItem) {
     return (
-      <div className="flex-1 min-h-[70vh] flex flex-col items-center justify-center bg-background px-8 text-center">
-        <div className="w-24 h-24 bg-surface rounded-full flex items-center justify-center border-2 border-slate-800 mb-6">
-          <Users className="w-10 h-10 text-slate-600" />
+      <div className="flex-1 bg-background flex flex-col items-center justify-center p-8 text-center">
+        <div className="relative w-72 h-72 mb-8">
+           <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-full animate-pulse" />
+           <img src="/src/assets/empty_state_radar.png" alt="No signals" className="relative z-10 w-full h-full object-contain opacity-80" />
         </div>
-        <h2 className="text-2xl font-rajdhani font-bold text-white uppercase tracking-tight">Zero Signals Detected</h2>
-        <p className="text-slate-400 mt-2 max-w-xs">
-          You've explored the entire sector. Broaden your search parameters or check back later.
+        <h2 className="text-3xl font-rajdhani font-bold text-white uppercase tracking-tight">Sector Fully Scanned</h2>
+        <p className="text-text-low font-medium mt-2 max-w-xs mx-auto">
+          Zero signals detected in this quadrant. Broaden your search parameters or check back for new recruits later.
         </p>
-        <button 
+        <button
           onClick={() => setCurrentIndex(0)}
-          className="mt-8 px-8 py-3 bg-primary text-background font-bold rounded-xl hover:bg-cyan-400 transition-all uppercase tracking-wider"
+          className="mt-10 px-10 py-4 bg-primary text-background font-black rounded-xl hover:brightness-110 transition-all uppercase tracking-widest shadow-[0_0_30px_rgba(0,245,255,0.4)]"
         >
           RESET RADAR
         </button>

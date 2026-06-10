@@ -56,9 +56,13 @@ const Notifications = () => {
 
       <div className="px-4 space-y-3">
         {notifications.length === 0 ? (
-          <div className="py-20 text-center opacity-40">
-            <Bell size={64} className="mx-auto mb-4 text-text-low" />
-            <p className="text-text-low font-bold uppercase tracking-widest text-sm">All clear, Commander.</p>
+          <div className="py-12 text-center">
+            <div className="relative w-64 h-64 mx-auto mb-6">
+               <div className="absolute inset-0 bg-secondary/10 blur-3xl rounded-full animate-pulse" />
+               <img src="/src/assets/empty_state_notifications.png" alt="No activity" className="relative z-10 w-full h-full object-contain opacity-80" />
+            </div>
+            <h2 className="text-2xl font-rajdhani font-bold text-white uppercase tracking-tight">Radio Silence</h2>
+            <p className="text-text-low font-medium mt-2 max-w-xs mx-auto">Your comms-link is clear. New signals will appear here as they arrive.</p>
           </div>
         ) : (
           <AnimatePresence initial={false}>

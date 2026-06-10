@@ -144,11 +144,19 @@ const Matches = () => {
       </div>
       
       {matches.length === 0 ? (
-        <div className="flex flex-col items-center justify-center mt-20 text-center opacity-60">
-          <div className="w-48 h-48 mb-6 bg-surface/30 rounded-full flex items-center justify-center">
-             <Users size={80} className="text-secondary/50" />
+        <div className="flex flex-col items-center justify-center mt-12 text-center">
+          <div className="relative w-64 h-64 mb-6">
+             <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-full animate-pulse" />
+             <img src="/src/assets/empty_state_radar.png" alt="No signals" className="relative z-10 w-full h-full object-contain opacity-80" />
           </div>
-          <p className="text-text-low font-bold uppercase tracking-widest text-sm">No squads yet. Keep exploring!</p>
+          <h2 className="text-2xl font-rajdhani font-bold text-white uppercase tracking-tight">Zero Signals Detected</h2>
+          <p className="text-text-low font-medium mt-2 max-w-xs mx-auto">No squads formed yet. Head back to the radar and start scanning!</p>
+          <button 
+            onClick={() => window.location.href='/discover'}
+            className="mt-8 px-8 py-3 bg-primary text-background font-bold rounded-xl hover:brightness-110 transition-all uppercase tracking-widest shadow-[0_0_20px_rgba(0,245,255,0.3)]"
+          >
+            Go to Radar
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 max-w-lg mx-auto">
