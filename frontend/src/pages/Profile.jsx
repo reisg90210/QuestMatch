@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { users } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, Save, Camera, Check, X } from 'lucide-react';
+import { LogOut, Save, Camera, Check, X, ShieldCheck, Zap } from 'lucide-react';
+import VerifiedBadge from '../components/VerifiedBadge';
+import { useNavigate } from 'react-router-dom';
 
 const Profile = () => {
-  const { logout, user } = useAuth();
+  const { logout, user, login } = useAuth();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState({
     bio: '',
     platforms: [],
     games: [],
     skill_level: 'Casual',
-    avatar_url: ''
+    avatar_url: '',
+    is_premium: false,
+    is_verified: false
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -44,7 +49,9 @@ const Profile = () => {
         ...response.data,
         platforms: response.data.platforms || [],
         games: response.data.games || [],
-        skill_level: response.data.skill_level || 'Casual'
+        skill_level: response.data.skill_level || 'Casual',
+        is_premium: !!response.data.is_premium,
+        is_verified: !!response.data.is_verified
       }));
     } catch (err) {
       console.error('Failed to fetch profile', err);
@@ -119,7 +126,24 @@ const Profile = () => {
       </div>
 
       <div className="px-6 mt-6 text-center">
-        <h1 className="text-4xl font-rajdhani font-bold text-primary uppercase tracking-tight">{user?.username || 'Gamer'}</h1>
+        <div className="flex items-center justify-center gap-3">
+          <h1 className="text-4xl font-rajdhani font-bold text-primary uppercase tracking-tight">{user?.username || 'Gamer'}</h1>
+          {profile.is_verified && <VerifiedBadge size={24} className="mt-1" />}
+        </div>
+        {profile.is_premium ? (
+          <div className="flex items-center justify-center gap-1.5 mt-1 text-secondary font-bold text-xs uppercase tracking-[0.2em]">
+            <Zap size={14} fill="currentColor" />
+            Elite Questor
+          </div>
+        ) : (
+          <button 
+            onClick={() => navigate('/premium')}
+            className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full bg-secondary/10 border border-secondary/20 text-secondary font-bold text-[10px] uppercase tracking-widest hover:bg-secondary/20 transition-all"
+          >
+            <Zap size={12} fill="currentColor" />
+            Go Premium
+          </button>
+        )}
         <p className="text-text-low text-sm font-medium mt-1">LVL 24 • LEGENDARY EXPLORER</p>
       </div>
 

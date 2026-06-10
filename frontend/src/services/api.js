@@ -24,6 +24,7 @@ export const users = {
   getProfile: () => api.get('/users/profile'),
   updateProfile: (data) => api.put('/users/profile', data),
   getById: (id) => api.get(`/users/${id}`),
+  upgrade: (type) => api.post('/users/upgrade', { type }),
 };
 
 export const discovery = {
@@ -44,6 +45,18 @@ export const quests = {
   create: (data) => api.post('/quests', data),
   list: () => api.get('/quests'),
   getById: (id) => api.get(`/quests/${id}`),
+  apply: (id) => api.post(`/quests/${id}/apply`),
+  getApplications: (id) => api.get(`/quests/${id}/applications`),
+};
+
+export const applications = {
+  updateStatus: (id, status) => api.put(`/applications/${id}`, { status }),
+  remove: (id) => api.delete(`/applications/${id}`),
+};
+
+export const notifications = {
+  list: () => api.get('/notifications'),
+  markAsRead: (id) => api.put(`/notifications/${id}/read`),
 };
 
 export default api;

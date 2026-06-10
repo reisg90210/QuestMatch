@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { matches as matchesApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Send, ChevronLeft, Search, MessageSquare } from 'lucide-react';
+import { Send, ChevronLeft, Search, MessageSquare, Users, ShieldCheck, Sliders } from 'lucide-react';
+import VerifiedBadge from '../components/VerifiedBadge';
+import FilterSidebar from '../components/FilterSidebar';
 
 const Matches = () => {
   const [matches, setMatches] = useState([]);
@@ -9,6 +11,12 @@ const Matches = () => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    skillLevel: 'Casual',
+    playstyle: '',
+    hardware: ''
+  });
   const { user } = useAuth();
   const messagesEndRef = useRef(null);
 
@@ -82,7 +90,10 @@ const Matches = () => {
             <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-primary border-2 border-surface" />
           </div>
           <div className="ml-3">
-            <h2 className="text-text-high font-rajdhani font-bold text-lg leading-none uppercase">{selectedMatch.username}</h2>
+            <div className="flex items-center gap-1.5">
+              <h2 className="text-text-high font-rajdhani font-bold text-lg leading-none uppercase">{selectedMatch.username}</h2>
+              {selectedMatch.is_verified && <VerifiedBadge size={14} />}
+            </div>
             <p className="text-primary text-[10px] font-bold uppercase tracking-widest">Online now</p>
           </div>
         </div>
@@ -138,8 +149,16 @@ const Matches = () => {
     <div className="flex-1 bg-background p-6 overflow-y-auto pb-28 font-inter">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-4xl font-rajdhani font-bold text-text-high uppercase tracking-tight">Your <span className="text-primary">Squad</span></h1>
-        <div className="w-10 h-10 rounded-full bg-surface border border-background flex items-center justify-center text-text-low hover:text-primary transition-colors">
-          <Search size={20} />
+        <div className="flex items-center gap-2">
+          <div className="w-10 h-10 rounded-full bg-surface border border-background flex items-center justify-center text-text-low hover:text-primary transition-colors">
+            <Search size={20} />
+          </div>
+          <div 
+            onClick={() => setIsFilterOpen(true)}
+            className="w-10 h-10 rounded-full bg-surface border border-background flex items-center justify-center text-text-low hover:text-primary transition-colors cursor-pointer"
+          >
+            <Sliders size={20} />
+          </div>
         </div>
       </div>
       
@@ -167,7 +186,10 @@ const Matches = () => {
                 <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-primary border-4 border-surface" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-text-high font-rajdhani font-bold uppercase tracking-wide text-xl">{match.username}</h3>
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-text-high font-rajdhani font-bold uppercase tracking-wide text-xl truncate">{match.username}</h3>
+                  {match.is_verified && <VerifiedBadge size={14} />}
+                </div>
                 <p className="text-text-low text-xs mt-0.5 font-medium truncate">
                   Ready for some competitive gaming?
                 </p>
@@ -180,6 +202,14 @@ const Matches = () => {
           ))}
         </div>
       )}
+
+      <FilterSidebar 
+        isOpen={isFilterOpen} 
+        onClose={() => setIsFilterOpen(false)}
+        isPremium={user?.is_premium}
+        filters={filters}
+        setFilters={setFilters}
+      />
     </div>
   );
 };

@@ -1,14 +1,32 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Compass, Heart, User, MessageCircle, PlusCircle } from 'lucide-react';
+import { Compass, Heart, User, MessageCircle, PlusCircle, Bell } from 'lucide-react';
+import { notifications as notificationsApi } from '../services/api';
 
 const Navbar = () => {
   const location = useLocation();
   const currentPath = location.pathname;
+  const [unreadCount, setUnreadCount] = React.useState(0);
+
+  React.useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const response = await notificationsApi.list();
+        const unread = response.data.filter(n => !n.is_read).length;
+        setUnreadCount(unread);
+      } catch (err) {
+        console.error('Failed to fetch notifications count:', err);
+      }
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000); // Check every 30s
+    return () => clearInterval(interval);
+  }, []);
 
   const navItems = [
     { icon: Compass, label: 'Discover', path: '/discover' },
     { icon: PlusCircle, label: 'Create', path: '/create-quest' },
+    { icon: Bell, label: 'Activity', path: '/notifications' },
     { icon: Heart, label: 'Matches', path: '/matches' },
     { icon: User, label: 'Profile', path: '/profile' }
   ];
@@ -30,6 +48,11 @@ const Navbar = () => {
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full shadow-[0_0_10px_rgba(0,245,255,0.8)]" />
               )}
               <item.icon size={26} strokeWidth={isActive ? 2.5 : 2} />
+              {item.label === 'Activity' && unreadCount > 0 && (
+                <div className="absolute top-0 right-0 w-4 h-4 bg-alert rounded-full border-2 border-background flex items-center justify-center">
+                   <span className="text-[8px] font-black text-white">{unreadCount}</span>
+                </div>
+              )}
               {item.label === 'Matches' && (
                 <div className="absolute top-0 right-0 w-3 h-3 bg-alert rounded-full border-2 border-background" />
               )}

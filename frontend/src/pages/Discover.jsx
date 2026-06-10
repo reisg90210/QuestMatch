@@ -1,23 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, X, Star, Users, Gamepad2, Clock, Trophy } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import api from '../services/api';
+import { Heart, X, Star, Users, Gamepad2, Clock, Trophy, ShieldCheck, Zap, Sliders } from 'lucide-react';
+import VerifiedBadge from '../components/VerifiedBadge';
+import FilterSidebar from '../components/FilterSidebar';
+import { auth, users, discovery, quests, swipes } from '../services/api';
 
 const Discover = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [swipeDirection, setSwipeDirection] = useState(null);
   const [showMatchOverlay, setShowMatchOverlay] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    skillLevel: 'Casual',
+    playstyle: '',
+    hardware: ''
+  });
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [usersRes, questsRes] = await Promise.all([
-          api.get('/users'),
-          api.get('/api/quests')
+          discovery.getPotentialMatches(),
+          quests.list()
         ]);
         
         const others = usersRes.data.filter(u => u.id !== user.id);
@@ -51,10 +59,7 @@ const Discover = () => {
       if (direction === 'like') {
         if (currentItem.itemType === 'user') {
           try {
-            const response = await api.post('/swipes', {
-              swiped_id: currentItem.id,
-              direction: 'like'
-            });
+            const response = await swipes.submitSwipe(currentItem.id, 'like');
             if (response.data.match) {
               setShowMatchOverlay(true);
             }
@@ -64,10 +69,11 @@ const Discover = () => {
         } else {
           // It's a quest - "Joining" the quest
           try {
-            // For now, just a simple notification or placeholder for join logic
-            console.log('Requested to join quest:', currentItem.id);
+            await quests.apply(currentItem.id);
+            alert('Application Transmitted to Squad Leader!');
           } catch (err) {
             console.error('Failed to join quest:', err);
+            alert(err.response?.data?.error || 'Failed to transmit application.');
           }
         }
       }
@@ -114,6 +120,16 @@ const Discover = () => {
 
   return (
     <div className="flex-1 flex flex-col items-center bg-obsidian overflow-hidden pt-4 relative">
+      {/* Top Header with Filter */}
+      <div className="absolute top-6 right-6 z-50">
+        <button 
+          onClick={() => setIsFilterOpen(true)}
+          className="w-12 h-12 rounded-full bg-surface/80 backdrop-blur-md border border-white/5 flex items-center justify-center text-text-low hover:text-primary transition-all active:scale-90"
+        >
+          <Sliders size={20} />
+        </button>
+      </div>
+
       {/* Match Overlay */}
       <AnimatePresence>
         {showMatchOverlay && (
@@ -248,10 +264,19 @@ const Discover = () => {
                       />
                       <div>
                         <div className="text-[9px] text-slate-500 uppercase font-bold">Lead by</div>
-                        <div className="text-white font-medium text-sm">{currentItem.creator_name}</div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="text-white font-medium text-sm">{currentItem.creator_name}</div>
+                      {currentItem.creator_is_verified && <VerifiedBadge size={14} />}
+                    </div>
                       </div>
-                      <div className="ml-auto">
-                         <span className="text-[10px] text-primary font-bold animate-pulse">JOIN SQUAD →</span>
+                      <div 
+                        className="ml-auto cursor-pointer group/join"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/quests/${currentItem.id}`);
+                        }}
+                      >
+                         <span className="text-[10px] text-primary font-bold animate-pulse group-hover/join:underline">JOIN SQUAD →</span>
                       </div>
                     </div>
                   </div>
@@ -288,8 +313,15 @@ const Discover = () => {
                 <div className="absolute bottom-0 left-0 right-0 p-8">
                   <h2 className="text-4xl font-rajdhani font-bold text-text-high flex items-center gap-3 uppercase tracking-tight">
                     {currentItem.username}
+                    {currentItem.is_verified && <VerifiedBadge size={28} />}
                     <span className="text-xl font-normal text-primary">LVL 24</span>
                   </h2>
+                  {currentItem.is_premium && (
+                    <div className="flex items-center gap-1.5 mt-1 text-secondary font-bold text-xs uppercase tracking-[0.2em]">
+                      <Zap size={14} fill="currentColor" />
+                      Elite Questor
+                    </div>
+                  )}
                   <p className="text-text-low text-sm mt-3 line-clamp-3 leading-relaxed">
                     {currentItem.bio || "No bio yet. Looking for a duo partner to climb the ranks!"}
                   </p>
@@ -329,6 +361,14 @@ const Discover = () => {
           <Heart size={32} fill="currentColor" strokeWidth={3} />
         </button>
       </div>
+
+      <FilterSidebar 
+        isOpen={isFilterOpen} 
+        onClose={() => setIsFilterOpen(false)}
+        isPremium={user?.is_premium}
+        filters={filters}
+        setFilters={setFilters}
+      />
     </div>
   );
 };
