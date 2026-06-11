@@ -136,7 +136,7 @@ app.get('/api/discover', authenticateToken, async (req, res) => {
     const potentialMatches = await db.run(`
       SELECT id, username, bio, platforms, games, skill_level, avatar_url, is_premium, is_verified
       FROM users
-
+      WHERE id != ?
       AND id NOT IN (SELECT swiped_id FROM swipes WHERE swiper_id = ?)
       LIMIT 20
     `, [req.user.id, req.user.id]);
