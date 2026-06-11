@@ -78,7 +78,7 @@ const CreateQuest = () => {
           placeholder="Search games..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full bg-obsidian-light border border-slate-700 rounded-xl py-3 pl-12 pr-4 text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
+          className="w-full bg-obsidian-light border border-slate-700 rounded-xl py-3 pl-12 pr-4 text-white text-base focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
@@ -143,7 +143,7 @@ const CreateQuest = () => {
             value={formData.title}
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
             placeholder="e.g., Gold Rank Push Tonight!"
-            className="w-full bg-obsidian-light border border-slate-700 rounded-xl py-3 px-4 text-white focus:border-primary outline-none"
+            className="w-full bg-obsidian-light border border-slate-700 rounded-xl py-3 px-4 text-white text-base focus:border-primary outline-none"
           />
         </div>
         <div className="space-y-2">
@@ -153,7 +153,7 @@ const CreateQuest = () => {
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             placeholder="What are we doing? Any specific goals?"
-            className="w-full bg-obsidian-light border border-slate-700 rounded-xl py-3 px-4 text-white focus:border-primary outline-none resize-none"
+            className="w-full bg-obsidian-light border border-slate-700 rounded-xl py-3 px-4 text-white text-base focus:border-primary outline-none resize-none"
           />
         </div>
       </div>
@@ -313,39 +313,41 @@ const CreateQuest = () => {
   );
 
   return (
-    <div className="min-h-screen bg-obsidian pb-24 pt-8 px-4">
+    <div className="min-h-screen bg-background pb-32 pt-8 px-4">
+      {/* Progress Bar at the very top */}
+      <div className="fixed top-0 left-0 right-0 h-1.5 bg-surface z-[60]">
+        <motion.div 
+          initial={{ width: 0 }}
+          animate={{ width: `${(step / 4) * 100}%` }}
+          className="h-full bg-primary shadow-[0_0_15px_rgba(0,245,255,0.8)]"
+        />
+      </div>
+
       <div className="max-w-md mx-auto">
         {step < 5 && (
           <>
             {/* Header */}
             <div className="flex items-center justify-between mb-8">
               {step > 1 ? (
-                <button onClick={prevStep} className="p-2 -ml-2 text-slate-400 hover:text-white transition-colors">
+                <button onClick={prevStep} className="p-3 -ml-3 text-text-low hover:text-text-high transition-colors">
                   <ChevronLeft className="w-6 h-6" />
                 </button>
               ) : (
                 <div className="w-10" />
               )}
               <div className="text-center">
-                <h1 className="text-2xl font-rajdhani font-bold text-white tracking-tight uppercase">
+                <h1 className="text-2xl font-rajdhani font-bold text-text-high tracking-tight uppercase">
                   {step === 1 ? 'Select Game' : step === 2 ? 'Quest Details' : step === 3 ? 'Requirements' : 'Review & Post'}
                 </h1>
-                <div className="flex justify-center gap-1.5 mt-2">
-                  {[1, 2, 3, 4].map(s => (
-                    <div 
-                      key={s} 
-                      className={`h-1 rounded-full transition-all duration-300 ${
-                        s === step ? 'w-8 bg-primary shadow-[0_0_10px_rgba(0,255,255,0.5)]' : s < step ? 'w-4 bg-primary/40' : 'w-4 bg-slate-800'
-                      }`}
-                    />
-                  ))}
+                <div className="text-primary text-[10px] font-black tracking-[0.2em] mt-1">
+                  STEP {step} OF 4
                 </div>
               </div>
               <div className="w-10" />
             </div>
 
-            {/* Content */}
-            <div className="min-h-[400px]">
+            {/* Content with more padding on mobile */}
+            <div className="min-h-[400px] pb-10">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={step}
@@ -353,6 +355,7 @@ const CreateQuest = () => {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.2 }}
+                  className="space-y-6"
                 >
                   {step === 1 && renderStep1()}
                   {step === 2 && renderStep2()}
@@ -362,29 +365,27 @@ const CreateQuest = () => {
               </AnimatePresence>
             </div>
 
-            {/* Footer Actions */}
-            <div className="fixed bottom-24 left-0 right-0 p-4 bg-gradient-to-t from-obsidian via-obsidian to-transparent">
+            {/* Sticky Footer Actions */}
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/90 backdrop-blur-lg border-t border-white/5 z-50">
               <div className="max-w-md mx-auto">
-                {step > 1 && (
-                  <button
-                    onClick={step === 4 ? handleSubmit : nextStep}
-                    disabled={loading || (step === 2 && (!formData.title || !formData.quest_type))}
-                    className={`w-full py-4 rounded-xl font-rajdhani font-bold text-lg tracking-wider transition-all flex items-center justify-center gap-2 ${
-                      loading || (step === 2 && (!formData.title || !formData.quest_type))
-                        ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                        : 'bg-primary text-obsidian hover:bg-cyan-400 shadow-[0_0_20px_rgba(0,255,255,0.2)]'
-                    }`}
-                  >
-                    {loading ? (
-                      <div className="w-6 h-6 border-2 border-obsidian/30 border-t-obsidian rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        {step === 4 ? 'INITIALIZE QUEST' : 'CONTINUE'}
-                        <ChevronRight className="w-5 h-5" />
-                      </>
-                    )}
-                  </button>
-                )}
+                <button
+                  onClick={step === 4 ? handleSubmit : nextStep}
+                  disabled={loading || (step === 1 && !formData.game_id) || (step === 2 && (!formData.title || !formData.quest_type))}
+                  className={`w-full py-4 rounded-xl font-rajdhani font-bold text-lg tracking-wider transition-all flex items-center justify-center gap-2 ${
+                    loading || (step === 1 && !formData.game_id) || (step === 2 && (!formData.title || !formData.quest_type))
+                      ? 'bg-surface text-text-low cursor-not-allowed opacity-50'
+                      : 'bg-primary text-background hover:brightness-110 shadow-[0_0_20px_rgba(0,245,255,0.3)]'
+                  }`}
+                >
+                  {loading ? (
+                    <div className="w-6 h-6 border-2 border-background/30 border-t-background rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      {step === 4 ? 'INITIALIZE QUEST' : 'CONTINUE'}
+                      <ChevronRight className="w-5 h-5" />
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </>
