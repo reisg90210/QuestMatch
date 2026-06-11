@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Compass, Heart, User, MessageCircle, PlusCircle, Bell } from 'lucide-react';
+import { Compass, Heart, User, PlusCircle, Bell } from 'lucide-react';
 import { notifications as notificationsApi } from '../services/api';
 
 const Navbar = () => {
@@ -32,7 +32,7 @@ const Navbar = () => {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-lg border-t border-surface flex justify-around items-center h-20 px-6 z-50">
+    <nav className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-lg border-t border-white/5 flex justify-around items-center h-20 px-6 z-50">
       {navItems.map((item) => {
         const isActive = currentPath === item.path;
         return (
@@ -54,7 +54,7 @@ const Navbar = () => {
                 </div>
               )}
               {item.label === 'Matches' && (
-                <div className="absolute top-0 right-0 w-3 h-3 bg-alert rounded-full border-2 border-background" />
+                <div className="absolute top-0 right-0 w-3 h-3 bg-alert rounded-full border-2 border-background shadow-[0_0_10px_rgba(255,0,110,0.5)]" />
               )}
             </div>
             <span className={`text-[10px] font-black uppercase tracking-widest font-rajdhani ${isActive ? 'opacity-100' : 'opacity-60'}`}>
