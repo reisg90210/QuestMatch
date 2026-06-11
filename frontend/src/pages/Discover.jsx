@@ -1,23 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, X, Star, Users, Gamepad2, Clock, Trophy } from 'lucide-react';
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
+import { Heart, X, Star, Users, Gamepad2, Clock, Trophy, Sliders, Zap } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import api from '../services/api';
+import VerifiedBadge from '../components/VerifiedBadge';
+import FilterSidebar from '../components/FilterSidebar';
+import { discovery, quests, swipes } from '../services/api';
 
 const Discover = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [swipeDirection, setSwipeDirection] = useState(null);
   const [showMatchOverlay, setShowMatchOverlay] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    skillLevel: 'Casual',
+    playstyle: '',
+    hardware: ''
+  });
+
+  const x = useMotionValue(0);
+  const likeOpacity = useTransform(x, [20, 100], [0, 1]);
+  const dislikeOpacity = useTransform(x, [-100, -20], [1, 0]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [usersRes, questsRes] = await Promise.all([
-          api.get('/users'),
-          api.get('/api/quests')
+          discovery.getPotentialMatches(),
+          quests.list()
         ]);
         
         const others = usersRes.data.filter(u => u.id !== user.id);
@@ -51,10 +65,7 @@ const Discover = () => {
       if (direction === 'like') {
         if (currentItem.itemType === 'user') {
           try {
-            const response = await api.post('/swipes', {
-              swiped_id: currentItem.id,
-              direction: 'like'
-            });
+            const response = await swipes.submitSwipe(currentItem.id, 'like');
             if (response.data.match) {
               setShowMatchOverlay(true);
             }
@@ -64,8 +75,8 @@ const Discover = () => {
         } else {
           // It's a quest - "Joining" the quest
           try {
-            // For now, just a simple notification or placeholder for join logic
-            console.log('Requested to join quest:', currentItem.id);
+            await quests.apply(currentItem.id);
+            // alert('Application Transmitted to Squad Leader!');
           } catch (err) {
             console.error('Failed to join quest:', err);
           }
@@ -74,12 +85,13 @@ const Discover = () => {
       
       setCurrentIndex(prev => prev + 1);
       setSwipeDirection(null);
+      x.set(0);
     }, 300);
   };
 
   if (loading) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-obsidian">
+      <div className="flex-1 flex flex-col items-center justify-center bg-background">
         <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin shadow-[0_0_20px_rgba(0,255,255,0.2)]" />
         <p className="mt-6 text-primary font-rajdhani font-bold text-xl animate-pulse tracking-[0.2em] uppercase">
           Scanning Network...
@@ -92,17 +104,22 @@ const Discover = () => {
 
   if (!currentItem) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-obsidian px-8 text-center">
-        <div className="w-24 h-24 bg-surface rounded-full flex items-center justify-center border-2 border-slate-800 mb-6">
-          <Users className="w-10 h-10 text-slate-600" />
+      <div className="flex-1 bg-background flex flex-col items-center justify-center p-8 text-center">
+        <div className="relative w-72 h-72 mb-8">
+           <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-full animate-pulse" />
+           <img 
+             src="/src/assets/empty_state_radar.png" 
+             alt="No signals" 
+             className="relative z-10 w-full h-full object-contain opacity-80" 
+           />
         </div>
-        <h2 className="text-2xl font-rajdhani font-bold text-white uppercase tracking-tight">Zero Signals Detected</h2>
-        <p className="text-slate-400 mt-2 max-w-xs">
-          You've explored the entire sector. Broaden your search parameters or check back later.
+        <h2 className="text-3xl font-rajdhani font-bold text-white uppercase tracking-tight">Sector Fully Scanned</h2>
+        <p className="text-text-low font-medium mt-2 max-w-xs mx-auto text-sm">
+          Zero signals detected in this quadrant. Broaden your search parameters or check back for new recruits later.
         </p>
-        <button 
+        <button
           onClick={() => setCurrentIndex(0)}
-          className="mt-8 px-8 py-3 bg-primary text-obsidian font-bold rounded-xl hover:bg-cyan-400 transition-all uppercase tracking-wider"
+          className="mt-10 px-10 py-4 bg-primary text-background font-black rounded-xl hover:brightness-110 transition-all uppercase tracking-widest shadow-[0_0_30px_rgba(0,245,255,0.4)]"
         >
           RESET RADAR
         </button>
@@ -113,7 +130,17 @@ const Discover = () => {
   const isQuest = currentItem.itemType === 'quest';
 
   return (
-    <div className="flex-1 flex flex-col items-center bg-obsidian overflow-hidden pt-4 relative">
+    <div className="flex-1 flex flex-col items-center bg-background overflow-hidden pt-4 relative">
+      {/* Top Header with Filter */}
+      <div className="absolute top-6 right-6 z-50">
+        <button 
+          onClick={() => setIsFilterOpen(true)}
+          className="w-12 h-12 rounded-full bg-surface/80 backdrop-blur-md border border-white/5 flex items-center justify-center text-text-low hover:text-primary transition-all active:scale-90"
+        >
+          <Sliders size={20} />
+        </button>
+      </div>
+
       {/* Match Overlay */}
       <AnimatePresence>
         {showMatchOverlay && (
@@ -121,7 +148,7 @@ const Discover = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-obsidian/90 backdrop-blur-xl flex flex-center items-center justify-center p-8"
+            className="fixed inset-0 z-[100] bg-background/90 backdrop-blur-xl flex flex-center items-center justify-center p-8"
           >
             <div className="text-center space-y-8 max-w-sm">
               <motion.div
@@ -142,8 +169,11 @@ const Discover = () => {
               <p className="text-white text-xl font-medium">You and <span className="text-primary">{currentItem.username}</span> have connected.</p>
               <div className="pt-4 space-y-4">
                 <button 
-                  onClick={() => setShowMatchOverlay(false)}
-                  className="w-full py-4 bg-primary text-obsidian font-bold rounded-xl shadow-[0_0_20px_rgba(0,255,255,0.4)]"
+                  onClick={() => {
+                    setShowMatchOverlay(false);
+                    navigate('/matches');
+                  }}
+                  className="w-full py-4 bg-primary text-background font-bold rounded-xl shadow-[0_0_20px_rgba(0,255,255,0.4)]"
                 >
                   SEND MISSION COMMAND
                 </button>
@@ -160,16 +190,18 @@ const Discover = () => {
       </AnimatePresence>
 
       {/* Swipe Card Area */}
-      <div className="flex-1 relative max-w-sm w-full mx-auto mt-4 mb-28">
+      <div className="flex-1 relative w-[90%] max-w-[400px] mx-auto mt-4 mb-28">
         <AnimatePresence mode="popLayout">
           <motion.div
             key={isQuest ? `quest-${currentItem.id}` : `user-${currentItem.id}`}
+            style={{ x }}
             drag="x"
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={1}
             onDragEnd={(e, info) => {
               if (info.offset.x > 100) handleSwipe('like');
               else if (info.offset.x < -100) handleSwipe('dislike');
+              else x.set(0);
             }}
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -179,19 +211,33 @@ const Discover = () => {
               rotate: swipeDirection === 'right' ? 20 : -20,
               transition: { duration: 0.3 }
             })}
-            className={`absolute inset-0 rounded-[2.5rem] shadow-2xl overflow-hidden border flex flex-col cursor-grab active:cursor-grabbing shadow-black/40 ${
-              isQuest ? 'border-primary/50 bg-obsidian-light' : 'border-background bg-surface'
+            className={`absolute inset-0 rounded-[2.5rem] shadow-2xl overflow-hidden border flex flex-col cursor-grab active:cursor-grabbing shadow-black/40 touch-pan-y ${
+              isQuest ? 'border-primary/50 bg-surface' : 'border-background bg-surface'
             }`}
           >
+            {/* Swipe Hints */}
+            <motion.div 
+              style={{ opacity: likeOpacity }} 
+              className="absolute top-20 right-10 z-50 border-4 border-primary px-4 py-2 rounded-xl rotate-[-15deg] pointer-events-none"
+            >
+              <span className="text-primary text-4xl font-black font-rajdhani uppercase">JOIN</span>
+            </motion.div>
+            <motion.div 
+              style={{ opacity: dislikeOpacity }} 
+              className="absolute top-20 left-10 z-50 border-4 border-alert px-4 py-2 rounded-xl rotate-[15deg] pointer-events-none"
+            >
+              <span className="text-alert text-4xl font-black font-rajdhani uppercase">SKIP</span>
+            </motion.div>
+
             {isQuest ? (
               /* Quest Card Content */
               <div className="relative flex-1 flex flex-col">
                 <div className="h-2/5 relative">
                   <div className="absolute inset-0 bg-primary/20 animate-pulse" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-obsidian-light to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
                   <div className="absolute inset-0 flex items-center justify-center p-6">
-                    <div className="bg-obsidian/60 backdrop-blur-md p-4 rounded-2xl border border-primary/30 flex items-center gap-4 w-full">
-                       <div className="w-16 h-16 rounded-xl bg-primary flex items-center justify-center text-obsidian shadow-[0_0_20px_rgba(0,255,255,0.4)]">
+                    <div className="bg-background/60 backdrop-blur-md p-4 rounded-2xl border border-primary/30 flex items-center gap-4 w-full">
+                       <div className="w-16 h-16 rounded-xl bg-primary flex items-center justify-center text-background shadow-[0_0_20px_rgba(0,255,255,0.4)]">
                          <Gamepad2 size={32} />
                        </div>
                        <div>
@@ -205,10 +251,10 @@ const Discover = () => {
                 <div className="flex-1 p-8 flex flex-col justify-between">
                   <div>
                     <div className="flex items-center gap-2 mb-4">
-                      <span className="px-3 py-1 bg-primary text-obsidian text-[10px] font-black uppercase rounded tracking-widest">
+                      <span className="px-3 py-1 bg-primary text-background text-[10px] font-black uppercase rounded tracking-widest">
                         {currentItem.quest_type}
                       </span>
-                      <span className="px-3 py-1 border border-slate-700 text-slate-400 text-[10px] font-bold uppercase rounded tracking-widest">
+                      <span className="px-3 py-1 border border-white/10 text-text-low text-[10px] font-bold uppercase rounded tracking-widest">
                         {currentItem.requirements?.skill_level || 'ALL LEVELS'}
                       </span>
                     </div>
@@ -217,41 +263,50 @@ const Discover = () => {
                       {currentItem.title}
                     </h2>
                     
-                    <p className="text-slate-400 mt-4 text-sm leading-relaxed line-clamp-4 italic">
-                      \"{currentItem.description}\"
+                    <p className="text-text-low mt-4 text-sm leading-relaxed line-clamp-4 italic">
+                      "{currentItem.description}"
                     </p>
                   </div>
 
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="flex items-center gap-3 p-3 bg-obsidian rounded-xl border border-slate-800">
+                      <div className="flex items-center gap-3 p-3 bg-background rounded-xl border border-white/5">
                         <Users className="text-primary w-5 h-5" />
                         <div>
-                          <div className="text-[9px] text-slate-500 uppercase font-bold">Squad</div>
+                          <div className="text-[9px] text-text-low uppercase font-bold">Squad</div>
                           <div className="text-white font-bold text-xs">{currentItem.filled_slots}/{currentItem.total_slots}</div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 p-3 bg-obsidian rounded-xl border border-slate-800">
+                      <div className="flex items-center gap-3 p-3 bg-background rounded-xl border border-white/5">
                         <Clock className="text-secondary w-5 h-5" />
                         <div>
-                          <div className="text-[9px] text-slate-500 uppercase font-bold">Start</div>
+                          <div className="text-[9px] text-text-low uppercase font-bold">Start</div>
                           <div className="text-white font-bold text-xs">{currentItem.start_time}</div>
                         </div>
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-3 pt-4 border-t border-slate-800">
+                    <div className="flex items-center gap-3 pt-4 border-t border-white/5">
                       <img 
                         src={currentItem.creator_avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentItem.creator_name}`} 
                         className="w-10 h-10 rounded-full border border-primary/30"
                         alt=""
                       />
                       <div>
-                        <div className="text-[9px] text-slate-500 uppercase font-bold">Lead by</div>
-                        <div className="text-white font-medium text-sm">{currentItem.creator_name}</div>
+                        <div className="text-[9px] text-text-low uppercase font-bold">Lead by</div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="text-white font-medium text-sm">{currentItem.creator_name}</div>
+                      {currentItem.creator_is_verified && <VerifiedBadge size={14} />}
+                    </div>
                       </div>
-                      <div className="ml-auto">
-                         <span className="text-[10px] text-primary font-bold animate-pulse">JOIN SQUAD →</span>
+                      <div 
+                        className="ml-auto cursor-pointer group/join"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/quests/${currentItem.id}`);
+                        }}
+                      >
+                         <span className="text-[10px] text-primary font-bold animate-pulse group-hover/join:underline">JOIN SQUAD →</span>
                       </div>
                     </div>
                   </div>
@@ -269,7 +324,7 @@ const Discover = () => {
                 
                 <div className="absolute top-6 left-6 flex flex-wrap gap-2">
                   {(typeof currentItem.platforms === 'string' ? JSON.parse(currentItem.platforms) : currentItem.platforms)?.map(platform => (
-                    <span key={platform} className="px-3 py-1 bg-surface/80 backdrop-blur-md border border-white/10 rounded-full text-[10px] font-bold text-text-high uppercase tracking-widest">
+                    <span key={platform} className="px-3 py-1 bg-background/80 backdrop-blur-md border border-white/10 rounded-full text-[10px] font-bold text-text-high uppercase tracking-widest">
                       {platform}
                     </span>
                   ))}
@@ -288,8 +343,15 @@ const Discover = () => {
                 <div className="absolute bottom-0 left-0 right-0 p-8">
                   <h2 className="text-4xl font-rajdhani font-bold text-text-high flex items-center gap-3 uppercase tracking-tight">
                     {currentItem.username}
+                    {currentItem.is_verified && <VerifiedBadge size={28} />}
                     <span className="text-xl font-normal text-primary">LVL 24</span>
                   </h2>
+                  {currentItem.is_premium && (
+                    <div className="flex items-center gap-1.5 mt-1 text-secondary font-bold text-xs uppercase tracking-[0.2em]">
+                      <Zap size={14} fill="currentColor" />
+                      Elite Questor
+                    </div>
+                  )}
                   <p className="text-text-low text-sm mt-3 line-clamp-3 leading-relaxed">
                     {currentItem.bio || "No bio yet. Looking for a duo partner to climb the ranks!"}
                   </p>
@@ -329,6 +391,14 @@ const Discover = () => {
           <Heart size={32} fill="currentColor" strokeWidth={3} />
         </button>
       </div>
+
+      <FilterSidebar 
+        isOpen={isFilterOpen} 
+        onClose={() => setIsFilterOpen(false)}
+        isPremium={user?.is_premium}
+        filters={filters}
+        setFilters={setFilters}
+      />
     </div>
   );
 };

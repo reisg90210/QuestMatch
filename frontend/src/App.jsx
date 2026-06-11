@@ -8,6 +8,10 @@ import Discover from './pages/Discover';
 import Matches from './pages/Matches';
 import Profile from './pages/Profile';
 import CreateQuest from './pages/CreateQuest';
+import QuestDetails from './pages/QuestDetails';
+import ManageSquad from './pages/ManageSquad';
+import Notifications from './pages/Notifications';
+import Premium from './pages/Premium';
 import Navbar from './components/Navbar';
 
 const PublicRoute = ({ children }) => {
@@ -39,6 +43,10 @@ function App() {
                     <Route path="/matches" element={<Matches />} />
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/create-quest" element={<CreateQuest />} />
+                    <Route path="/quests/:id" element={<QuestDetails />} />
+                    <Route path="/manage-squad/:id" element={<ManageSquad />} />
+                    <Route path="/notifications" element={<Notifications />} />
+                    <Route path="/premium" element={<Premium />} />
                     <Route path="/" element={<Navigate to="/discover" replace />} />
                   </Routes>
                   <Navbar />

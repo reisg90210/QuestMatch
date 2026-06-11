@@ -24,6 +24,7 @@ export const users = {
   getProfile: () => api.get('/users/profile'),
   updateProfile: (data) => api.put('/users/profile', data),
   getById: (id) => api.get(`/users/${id}`),
+  upgrade: (type) => api.post('/users/upgrade', { type }),
 };
 
 export const discovery = {
