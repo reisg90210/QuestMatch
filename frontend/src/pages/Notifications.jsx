@@ -17,6 +17,7 @@ import emptyNotifications from '../assets/empty_state_notifications.png';
 const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -25,11 +26,14 @@ const Notifications = () => {
   }, []);
 
   const fetchNotifications = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const response = await notificationsApi.list();
       setNotifications(response.data);
     } catch (err) {
       console.error('Failed to fetch notifications:', err);
+      setError('Comms disruption: Unable to receive intelligence updates.');
     } finally {
       setLoading(false);
     }
@@ -77,8 +81,32 @@ const Notifications = () => {
 
   if (loading) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-background">
-        <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+      <div className="flex-1 flex flex-col items-center justify-center bg-background space-y-6">
+        <div className="relative">
+          <div className="w-20 h-20 border-4 border-primary/20 rounded-full animate-ping absolute" />
+          <div className="w-20 h-20 border-t-4 border-primary rounded-full animate-spin relative" />
+        </div>
+        <p className="text-[10px] text-primary font-black uppercase tracking-[0.2em] animate-pulse">Downloading Intel...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-6">
+        <div className="w-20 h-20 bg-alert/10 rounded-full flex items-center justify-center text-alert border border-alert/20">
+          <AlertCircle size={40} />
+        </div>
+        <div>
+          <h2 className="text-white font-rajdhani font-black text-2xl uppercase tracking-wider">Intel Blocked</h2>
+          <p className="text-slate-500 mt-2 max-w-xs mx-auto">{error}</p>
+        </div>
+        <button 
+          onClick={fetchNotifications}
+          className="px-8 py-3 bg-primary text-obsidian font-bold rounded-xl uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
+        >
+          Re-establish Uplink
+        </button>
       </div>
     );
   }

@@ -23,12 +23,14 @@ const ManageSquad = () => {
   const [quest, setQuest] = useState(null);
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchSquadData();
   }, [id]);
 
   const fetchSquadData = async () => {
+    setError(null);
     try {
       const [qResponse, aResponse] = await Promise.all([
         questsApi.getById(id),
@@ -38,6 +40,7 @@ const ManageSquad = () => {
       setApplications(aResponse.data);
     } catch (err) {
       console.error('Failed to fetch squad data:', err);
+      setError('Critical Error: Could not establish squad uplink.');
     } finally {
       setLoading(false);
     }
@@ -68,6 +71,26 @@ const ManageSquad = () => {
     return (
       <div className="flex-1 flex items-center justify-center bg-background">
         <div className="w-12 h-12 border-4 border-surface border-t-primary rounded-full animate-spin shadow-[0_0_20px_rgba(0,255,255,0.2)]" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-6">
+        <div className="w-20 h-20 bg-alert/10 rounded-full flex items-center justify-center text-alert border border-alert/20">
+          <ShieldAlert size={40} />
+        </div>
+        <div>
+          <h2 className="text-white font-rajdhani font-black text-2xl uppercase tracking-wider">Uplink Failed</h2>
+          <p className="text-slate-500 mt-2 max-w-xs mx-auto">{error}</p>
+        </div>
+        <button 
+          onClick={fetchSquadData}
+          className="px-8 py-3 bg-primary text-obsidian font-bold rounded-xl uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
+        >
+          Retry Connection
+        </button>
       </div>
     );
   }
