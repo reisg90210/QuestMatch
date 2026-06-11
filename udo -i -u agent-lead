@@ -1,0 +1,297 @@
+[1mdiff --git a/backend/server.js b/backend/server.js[m
+[1mindex 3f7f074..0a86cf0 100644[m
+[1m--- a/backend/server.js[m
+[1m+++ b/backend/server.js[m
+[36m@@ -14,7 +14,15 @@[m [mapp.use(express.json());[m
+ const initDB = async () => {[m
+   try {[m
+     console.log('Ensuring database tables exist...');[m
+[31m-    await db.run('CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL, email TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, bio TEXT, platforms TEXT, games TEXT, skill_level TEXT, avatar_url TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)');[m
+[32m+[m[32m    await db.run('CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL, email TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, bio TEXT, platforms TEXT, games TEXT, skill_level TEXT, avatar_url TEXT, is_premium BOOLEAN DEFAULT 0, is_verified BOOLEAN DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)');[m
+[32m+[m[41m    [m
+[32m+[m[32m    // Migration: Add columns if they don't exist[m
+[32m+[m[32m    try {[m
+[32m+[m[32m      await db.run('ALTER TABLE users ADD COLUMN is_premium BOOLEAN DEFAULT 0');[m
+[32m+[m[32m    } catch (e) { /* already exists */ }[m
+[32m+[m[32m    try {[m
+[32m+[m[32m      await db.run('ALTER TABLE users ADD COLUMN is_verified BOOLEAN DEFAULT 0');[m
+[32m+[m[32m    } catch (e) { /* already exists */ }[m
+     await db.run('CREATE TABLE IF NOT EXISTS swipes (id INTEGER PRIMARY KEY AUTOINCREMENT, swiper_id TEXT NOT NULL, swiped_id TEXT NOT NULL, direction TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(swiper_id) REFERENCES users(id), FOREIGN KEY(swiped_id) REFERENCES users(id), UNIQUE(swiper_id, swiped_id))');[m
+     await db.run('CREATE TABLE IF NOT EXISTS matches (id INTEGER PRIMARY KEY AUTOINCREMENT, user1_id TEXT NOT NULL, user2_id TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(user1_id) REFERENCES users(id), FOREIGN KEY(user2_id) REFERENCES users(id), UNIQUE(user1_id, user2_id))');[m
+     await db.run('CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT, match_id INTEGER NOT NULL, sender_id TEXT NOT NULL, content TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(match_id) REFERENCES matches(id), FOREIGN KEY(sender_id) REFERENCES users(id))');[m
+[36m@@ -74,7 +82,7 @@[m [mapp.post('/api/auth/login', async (req, res) => {[m
+     }[m
+ [m
+     const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '24h' });[m
+[31m-    res.json({ token, user: { id: user.id, username: user.username, email: user.email } });[m
+[32m+[m[32m    res.json({ token, user: { id: user.id, username: user.username, email: user.email, is_premium: !!user.is_premium, is_verified: !!user.is_verified } });[m
+   } catch (error) {[m
+     console.error(error);[m
+     res.status(500).json({ error: 'Login failed' });[m
+[36m@@ -84,7 +92,7 @@[m [mapp.post('/api/auth/login', async (req, res) => {[m
+ // User Profile Routes[m
+ app.get('/api/users/profile', authenticateToken, async (req, res) => {[m
+   try {[m
+[31m-    const users = await db.run('SELECT id, username, email, bio, platforms, games, skill_level, avatar_url FROM users WHERE id = ?', [req.user.id]);[m
+[32m+[m[32m    const users = await db.run('SELECT id, username, email, bio, platforms, games, skill_level, avatar_url, is_premium, is_verified FROM users WHERE id = ?', [req.user.id]);[m
+     res.json(users[0]);[m
+   } catch (error) {[m
+     res.status(500).json({ error: 'Failed to fetch profile' });[m
+[36m@@ -92,11 +100,11 @@[m [mapp.get('/api/users/profile', authenticateToken, async (req, res) => {[m
+ });[m
+ [m
+ app.put('/api/users/profile', authenticateToken, async (req, res) => {[m
+[31m-  const { bio, platforms, games, skill_level, avatar_url } = req.body;[m
+[32m+[m[32m  const { bio, platforms, games, skill_level, avatar_url, is_premium, is_verified } = req.body;[m
+   try {[m
+     await db.run([m
+[31m-      'UPDATE users SET bio = ?, platforms = ?, games = ?, skill_level = ?, avatar_url = ? WHERE id = ?',[m
+[31m-      [bio, JSON.stringify(platforms), JSON.stringify(games), skill_level, avatar_url, req.user.id][m
+[32m+[m[32m      'UPDATE users SET bio = ?, platforms = ?, games = ?, skill_level = ?, avatar_url = ?, is_premium = ?, is_verified = ? WHERE id = ?',[m
+[32m+[m[32m      [bio, JSON.stringify(platforms), JSON.stringify(games), skill_level, avatar_url, is_premium ? 1 : 0, is_verified ? 1 : 0, req.user.id][m
+     );[m
+     res.json({ message: 'Profile updated' });[m
+   } catch (error) {[m
+[36m@@ -104,14 +112,29 @@[m [mapp.put('/api/users/profile', authenticateToken, async (req, res) => {[m
+   }[m
+ });[m
+ [m
+[32m+[m[32m// Mock Upgrade/Verify Endpoint[m
+[32m+[m[32mapp.post('/api/users/upgrade', authenticateToken, async (req, res) => {[m
+[32m+[m[32m  const { type } = req.body; // 'premium' or 'verify'[m
+[32m+[m[32m  try {[m
+[32m+[m[32m    if (type === 'premium') {[m
+[32m+[m[32m      await db.run('UPDATE users SET is_premium = 1 WHERE id = ?', [req.user.id]);[m
+[32m+[m[32m    } else if (type === 'verify') {[m
+[32m+[m[32m      await db.run('UPDATE users SET is_verified = 1 WHERE id = ?', [req.user.id]);[m
+[32m+[m[32m    }[m
+[32m+[m[32m    res.json({ message: `Account updated: ${type}` });[m
+[32m+[m[32m  } catch (error) {[m
+[32m+[m[32m    res.status(500).json({ error: 'Failed to upgrade account' });[m
+[32m+[m[32m  }[m
+[32m+[m[32m});[m
+[32m+[m
+ // Discovery & Swiping[m
+ app.get('/api/discover', authenticateToken, async (req, res) => {[m
+   try {[m
+     // Basic discovery: users not yet swiped on[m
+     const potentialMatches = await db.run(`[m
+[31m-      SELECT id, username, bio, platforms, games, skill_level, avatar_url [m
+[31m-      FROM users [m
+[31m-      WHERE id != ? [m
+[32m+[m[32m      SELECT id, username, bio, platforms, games, skill_level, avatar_url, is_premium, is_verified[m
+[32m+[m[32m      FROM users[m
+[32m+[m
+       AND id NOT IN (SELECT swiped_id FROM swipes WHERE swiper_id = ?)[m
+       LIMIT 20[m
+     `, [req.user.id, req.user.id]);[m
+[36m@@ -151,12 +174,12 @@[m [mapp.post('/api/swipes', authenticateToken, async (req, res) => {[m
+ app.get('/api/matches', authenticateToken, async (req, res) => {[m
+   try {[m
+     const matches = await db.run(`[m
+[31m-      SELECT m.id as match_id, u.id, u.username, u.avatar_url [m
+[32m+[m[32m      SELECT m.id as match_id, u.id, u.username, u.avatar_url, u.is_verified[m
+       FROM matches m[m
+       JOIN users u ON (u.id = m.user1_id OR u.id = m.user2_id)[m
+       WHERE (m.user1_id = ? OR m.user2_id = ?) AND u.id != ?[m
+     `, [req.user.id, req.user.id, req.user.id]);[m
+[31m-    res.json(matches);[m
+[32m+[m
+   } catch (error) {[m
+     res.status(500).json({ error: 'Failed to fetch matches' });[m
+   }[m
+[36m@@ -204,12 +227,12 @@[m [mapp.post('/api/quests', authenticateToken, async (req, res) => {[m
+ app.get('/api/quests', async (req, res) => {[m
+   try {[m
+     const quests = await db.run(`[m
+[31m-      SELECT q.*, u.username as creator_name, u.avatar_url as creator_avatar [m
+[32m+[m[32m      SELECT q.*, u.username as creator_name, u.avatar_url as creator_avatar, u.is_verified as creator_is_verified[m
+       FROM quests q[m
+       JOIN users u ON q.creator_id = u.id[m
+       ORDER BY q.created_at DESC[m
+     `);[m
+[31m-    [m
+[32m+[m
+     const parsed = quests.map(q => ({[m
+       ...q,[m
+       requirements: q.requirements ? JSON.parse(q.requirements) : {}[m
+[36m@@ -224,12 +247,12 @@[m [mapp.get('/api/quests', async (req, res) => {[m
+ app.get('/api/quests/:id', async (req, res) => {[m
+   try {[m
+     const quests = await db.run(`[m
+[31m-      SELECT q.*, u.username as creator_name, u.avatar_url as creator_avatar [m
+[32m+[m[32m      SELECT q.*, u.username as creator_name, u.avatar_url as creator_avatar, u.is_verified as creator_is_verified[m
+       FROM quests q[m
+       JOIN users u ON q.creator_id = u.id[m
+       WHERE q.id = ?[m
+     `, [req.params.id]);[m
+[31m-    [m
+[32m+[m
+     if (quests.length === 0) return res.status(404).json({ error: 'Quest not found' });[m
+     [m
+     const quest = {[m
+[1mdiff --git a/frontend/src/App.jsx b/frontend/src/App.jsx[m
+[1mindex c3b3b26..e23a2a7 100644[m
+[1m--- a/frontend/src/App.jsx[m
+[1m+++ b/frontend/src/App.jsx[m
+[36m@@ -8,6 +8,7 @@[m [mimport Discover from './pages/Discover';[m
+ import Matches from './pages/Matches';[m
+ import Profile from './pages/Profile';[m
+ import CreateQuest from './pages/CreateQuest';[m
+[32m+[m[32mimport Premium from './pages/Premium';[m
+ import Navbar from './components/Navbar';[m
+ [m
+ const PublicRoute = ({ children }) => {[m
+[36m@@ -39,6 +40,7 @@[m [mfunction App() {[m
+                     <Route path="/matches" element={<Matches />} />[m
+                     <Route path="/profile" element={<Profile />} />[m
+                     <Route path="/create-quest" element={<CreateQuest />} />[m
+[32m+[m[32m                    <Route path="/premium" element={<Premium />} />[m
+                     <Route path="/" element={<Navigate to="/discover" replace />} />[m
+                   </Routes>[m
+                   <Navbar />[m
+[1mdiff --git a/frontend/src/pages/Discover.jsx b/frontend/src/pages/Discover.jsx[m
+[1mindex 66e3191..14a78d1 100644[m
+[1m--- a/frontend/src/pages/Discover.jsx[m
+[1m+++ b/frontend/src/pages/Discover.jsx[m
+[36m@@ -1,6 +1,7 @@[m
+ import React, { useState, useEffect } from 'react';[m
+ import { motion, AnimatePresence } from 'framer-motion';[m
+[31m-import { Heart, X, Star, Users, Gamepad2, Clock, Trophy } from 'lucide-react';[m
+[32m+[m[32mimport { Heart, X, Star, Users, Gamepad2, Clock, Trophy, ShieldCheck, Zap } from 'lucide-react';[m
+[32m+[m[32mimport VerifiedBadge from '../components/VerifiedBadge';[m
+ import { useAuth } from '../context/AuthContext';[m
+ import api from '../services/api';[m
+ [m
+[36m@@ -248,7 +249,10 @@[m [mconst Discover = () => {[m
+                       />[m
+                       <div>[m
+                         <div className="text-[9px] text-slate-500 uppercase font-bold">Lead by</div>[m
+[31m-                        <div className="text-white font-medium text-sm">{currentItem.creator_name}</div>[m
+[32m+[m[32m                    <div className="flex items-center gap-1.5">[m
+[32m+[m[32m                      <div className="text-white font-medium text-sm">{currentItem.creator_name}</div>[m
+[32m+[m[32m                      {currentItem.creator_is_verified && <VerifiedBadge size={14} />}[m
+[32m+[m[32m                    </div>[m
+                       </div>[m
+                       <div className="ml-auto">[m
+                          <span className="text-[10px] text-primary font-bold animate-pulse">JOIN SQUAD →</span>[m
+[36m@@ -288,8 +292,15 @@[m [mconst Discover = () => {[m
+                 <div className="absolute bottom-0 left-0 right-0 p-8">[m
+                   <h2 className="text-4xl font-rajdhani font-bold text-text-high flex items-center gap-3 uppercase tracking-tight">[m
+                     {currentItem.username}[m
+[32m+[m[32m                    {currentItem.is_verified && <VerifiedBadge size={28} />}[m
+                     <span className="text-xl font-normal text-primary">LVL 24</span>[m
+                   </h2>[m
+[32m+[m[32m                  {currentItem.is_premium && ([m
+[32m+[m[32m                    <div className="flex items-center gap-1.5 mt-1 text-secondary font-bold text-xs uppercase tracking-[0.2em]">[m
+[32m+[m[32m                      <Zap size={14} fill="currentColor" />[m
+[32m+[m[32m                      Elite Questor[m
+[32m+[m[32m                    </div>[m
+[32m+[m[32m                  )}[m
+                   <p className="text-text-low text-sm mt-3 line-clamp-3 leading-relaxed">[m
+                     {currentItem.bio || "No bio yet. Looking for a duo partner to climb the ranks!"}[m
+                   </p>[m
+[1mdiff --git a/frontend/src/pages/Matches.jsx b/frontend/src/pages/Matches.jsx[m
+[1mindex 069d470..6ccd563 100644[m
+[1m--- a/frontend/src/pages/Matches.jsx[m
+[1m+++ b/frontend/src/pages/Matches.jsx[m
+[36m@@ -1,7 +1,8 @@[m
+ import React, { useState, useEffect, useRef } from 'react';[m
+ import { matches as matchesApi } from '../services/api';[m
+ import { useAuth } from '../context/AuthContext';[m
+[31m-import { Send, ChevronLeft, Search, MessageSquare } from 'lucide-react';[m
+[32m+[m[32mimport { Send, ChevronLeft, Search, MessageSquare, Users, ShieldCheck } from 'lucide-react';[m
+[32m+[m[32mimport VerifiedBadge from '../components/VerifiedBadge';[m
+ [m
+ const Matches = () => {[m
+   const [matches, setMatches] = useState([]);[m
+[36m@@ -167,7 +168,10 @@[m [mconst Matches = () => {[m
+                 <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-primary border-4 border-surface" />[m
+               </div>[m
+               <div className="flex-1 min-w-0">[m
+[31m-                <h3 className="text-text-high font-rajdhani font-bold uppercase tracking-wide text-xl">{match.username}</h3>[m
+[32m+[m[32m                <div className="flex items-center gap-1.5">[m
+[32m+[m[32m                  <h3 className="text-text-high font-rajdhani font-bold uppercase tracking-wide text-xl truncate">{match.username}</h3>[m
+[32m+[m[32m                  {match.is_verified && <VerifiedBadge size={14} />}[m
+[32m+[m[32m                </div>[m
+                 <p className="text-text-low text-xs mt-0.5 font-medium truncate">[m
+                   Ready for some competitive gaming?[m
+                 </p>[m
+[1mdiff --git a/frontend/src/pages/Profile.jsx b/frontend/src/pages/Profile.jsx[m
+[1mindex bfff3a6..6e5ba32 100644[m
+[1m--- a/frontend/src/pages/Profile.jsx[m
+[1m+++ b/frontend/src/pages/Profile.jsx[m
+[36m@@ -1,16 +1,21 @@[m
+ import React, { useState, useEffect } from 'react';[m
+ import { users } from '../services/api';[m
+ import { useAuth } from '../context/AuthContext';[m
+[31m-import { LogOut, Save, Camera, Check, X } from 'lucide-react';[m
+[32m+[m[32mimport { LogOut, Save, Camera, Check, X, ShieldCheck, Zap } from 'lucide-react';[m
+[32m+[m[32mimport VerifiedBadge from '../components/VerifiedBadge';[m
+[32m+[m[32mimport { useNavigate } from 'react-router-dom';[m
+ [m
+ const Profile = () => {[m
+[31m-  const { logout, user } = useAuth();[m
+[32m+[m[32m  const { logout, user, login } = useAuth();[m
+[32m+[m[32m  const navigate = useNavigate();[m
+   const [profile, setProfile] = useState({[m
+     bio: '',[m
+     platforms: [],[m
+     games: [],[m
+     skill_level: 'Casual',[m
+[31m-    avatar_url: ''[m
+[32m+[m[32m    avatar_url: '',[m
+[32m+[m[32m    is_premium: false,[m
+[32m+[m[32m    is_verified: false[m
+   });[m
+   const [loading, setLoading] = useState(true);[m
+   const [saving, setSaving] = useState(false);[m
+[36m@@ -44,7 +49,9 @@[m [mconst Profile = () => {[m
+         ...response.data,[m
+         platforms: response.data.platforms || [],[m
+         games: response.data.games || [],[m
+[31m-        skill_level: response.data.skill_level || 'Casual'[m
+[32m+[m[32m        skill_level: response.data.skill_level || 'Casual',[m
+[32m+[m[32m        is_premium: !!response.data.is_premium,[m
+[32m+[m[32m        is_verified: !!response.data.is_verified[m
+       }));[m
+     } catch (err) {[m
+       console.error('Failed to fetch profile', err);[m
+[36m@@ -119,7 +126,24 @@[m [mconst Profile = () => {[m
+       </div>[m
+ [m
+       <div className="px-6 mt-6 text-center">[m
+[31m-        <h1 className="text-4xl font-rajdhani font-bold text-primary uppercase tracking-tight">{user?.username || 'Gamer'}</h1>[m
+[32m+[m[32m        <div className="flex items-center justify-center gap-3">[m
+[32m+[m[32m          <h1 className="text-4xl font-rajdhani font-bold text-primary uppercase tracking-tight">{user?.username || 'Gamer'}</h1>[m
+[32m+[m[32m          {profile.is_verified && <VerifiedBadge size={24} className="mt-1" />}[m
+[32m+[m[32m        </div>[m
+[32m+[m[32m        {profile.is_premium ? ([m
+[32m+[m[32m          <div className="flex items-center justify-center gap-1.5 mt-1 text-secondary font-bold text-xs uppercase tracking-[0.2em]">[m
+[32m+[m[32m            <Zap size={14} fill="currentColor" />[m
+[32m+[m[32m            Elite Questor[m
+[32m+[m[32m          </div>[m
+[32m+[m[32m        ) : ([m
+[32m+[m[32m          <button[m[41m [m
+[32m+[m[32m            onClick={() => navigate('/premium')}[m
+[32m+[m[32m            className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full bg-secondary/10 border border-secondary/20 text-secondary font-bold text-[10px] uppercase tracking-widest hover:bg-secondary/20 transition-all"[m
+[32m+[m[32m          >[m
+[32m+[m[32m            <Zap size={12} fill="currentColor" />[m
+[32m+[m[32m            Go Premium[m
+[32m+[m[32m          </button>[m
+[32m+[m[32m        )}[m
+         <p className="text-text-low text-sm font-medium mt-1">LVL 24 • LEGENDARY EXPLORER</p>[m
+       </div>[m
+ [m
+[1mdiff --git a/frontend/src/services/api.js b/frontend/src/services/api.js[m
+[1mindex a94d57e..483373f 100644[m
+[1m--- a/frontend/src/services/api.js[m
+[1m+++ b/frontend/src/services/api.js[m
+[36m@@ -24,6 +24,7 @@[m [mexport const users = {[m
+   getProfile: () => api.get('/users/profile'),[m
+   updateProfile: (data) => api.put('/users/profile', data),[m
+   getById: (id) => api.get(`/users/${id}`),[m
+[32m+[m[32m  upgrade: (type) => api.post('/users/upgrade', { type }),[m
+ };[m
+ [m
+ export const discovery = {[m

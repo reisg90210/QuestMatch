@@ -27,6 +27,8 @@ const initDB = async () => {
     await db.run('CREATE TABLE IF NOT EXISTS matches (id INTEGER PRIMARY KEY AUTOINCREMENT, user1_id TEXT NOT NULL, user2_id TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(user1_id) REFERENCES users(id), FOREIGN KEY(user2_id) REFERENCES users(id), UNIQUE(user1_id, user2_id))');
     await db.run('CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT, match_id INTEGER NOT NULL, sender_id TEXT NOT NULL, content TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(match_id) REFERENCES matches(id), FOREIGN KEY(sender_id) REFERENCES users(id))');
     await db.run('CREATE TABLE IF NOT EXISTS quests (id TEXT PRIMARY KEY, creator_id TEXT NOT NULL, game_id TEXT NOT NULL, quest_type TEXT NOT NULL, title TEXT NOT NULL, description TEXT, requirements TEXT, start_time TEXT, total_slots INTEGER NOT NULL, filled_slots INTEGER DEFAULT 1, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(creator_id) REFERENCES users(id))');
+    await db.run('CREATE TABLE IF NOT EXISTS applications (id INTEGER PRIMARY KEY AUTOINCREMENT, quest_id TEXT NOT NULL, applicant_id TEXT NOT NULL, status TEXT DEFAULT "pending", created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(quest_id) REFERENCES quests(id), FOREIGN KEY(applicant_id) REFERENCES users(id), UNIQUE(quest_id, applicant_id))');
+    await db.run('CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, type TEXT NOT NULL, content TEXT NOT NULL, quest_id TEXT, sender_id TEXT, is_read BOOLEAN DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(user_id) REFERENCES users(id))');
     console.log('Database tables verified/created');
   } catch (error) {
     console.error('Failed to initialize database tables:', error);
@@ -134,7 +136,7 @@ app.get('/api/discover', authenticateToken, async (req, res) => {
     const potentialMatches = await db.run(`
       SELECT id, username, bio, platforms, games, skill_level, avatar_url, is_premium, is_verified
       FROM users
-      WHERE id != ? 
+      WHERE id != ?
       AND id NOT IN (SELECT swiped_id FROM swipes WHERE swiper_id = ?)
       LIMIT 20
     `, [req.user.id, req.user.id]);
@@ -185,6 +187,134 @@ app.get('/api/matches', authenticateToken, async (req, res) => {
   }
 });
 
+// Quest Applications & Squad Management
+app.post('/api/quests/:id/apply', authenticateToken, async (req, res) => {
+  try {
+    const questId = req.params.id;
+    const quests = await db.run('SELECT creator_id, title FROM quests WHERE id = ?', [questId]);
+    if (quests.length === 0) return res.status(404).json({ error: 'Quest not found' });
+    
+    await db.run('INSERT INTO applications (quest_id, applicant_id) VALUES (?, ?)', [questId, req.user.id]);
+    
+    // Notify creator
+    await db.run(
+      'INSERT INTO notifications (user_id, type, content, quest_id, sender_id) VALUES (?, ?, ?, ?, ?)',
+      [quests[0].creator_id, 'new_applicant', `User ${req.user.username} wants to join your quest: ${quests[0].title}.`, questId, req.user.id]
+    );
+    
+    res.status(201).json({ message: 'Application sent' });
+  } catch (error) {
+    if (error.message.includes('UNIQUE constraint failed')) {
+      return res.status(400).json({ error: 'Already applied to this quest' });
+    }
+    res.status(500).json({ error: 'Failed to apply' });
+  }
+});
+
+app.get('/api/quests/:id/applications', authenticateToken, async (req, res) => {
+  try {
+    const questId = req.params.id;
+    const quests = await db.run('SELECT creator_id FROM quests WHERE id = ?', [questId]);
+    if (quests.length === 0) return res.status(404).json({ error: 'Quest not found' });
+    if (quests[0].creator_id !== req.user.id) return res.status(403).json({ error: 'Unauthorized' });
+
+    const applications = await db.run(`
+      SELECT a.*, u.username, u.avatar_url, u.skill_level
+      FROM applications a
+      JOIN users u ON a.applicant_id = u.id
+      WHERE a.quest_id = ?
+    `, [questId]);
+    res.json(applications);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch applications' });
+  }
+});
+
+app.put('/api/applications/:id', authenticateToken, async (req, res) => {
+  const { status } = req.body; // 'accepted' or 'rejected'
+  try {
+    const apps = await db.run(`
+      SELECT a.*, q.creator_id, q.title, q.total_slots, q.filled_slots 
+      FROM applications a 
+      JOIN quests q ON a.quest_id = q.id 
+      WHERE a.id = ?
+    `, [req.params.id]);
+    
+    if (apps.length === 0) return res.status(404).json({ error: 'Application not found' });
+    const appData = apps[0];
+    
+    if (appData.creator_id !== req.user.id) return res.status(403).json({ error: 'Unauthorized' });
+
+    await db.run('UPDATE applications SET status = ? WHERE id = ?', [status, req.params.id]);
+
+    if (status === 'accepted') {
+      await db.run('UPDATE quests SET filled_slots = filled_slots + 1 WHERE id = ?', [appData.quest_id]);
+      
+      // Notify applicant
+      await db.run(
+        'INSERT INTO notifications (user_id, type, content, quest_id, sender_id) VALUES (?, ?, ?, ?, ?)',
+        [appData.applicant_id, 'application_accepted', `Your application to ${appData.title} was accepted! Pack your gear.`, appData.quest_id, req.user.id]
+      );
+      
+      // Check if quest is now full
+      if (appData.filled_slots + 1 >= appData.total_slots) {
+         await db.run(
+          'INSERT INTO notifications (user_id, type, content, quest_id) VALUES (?, ?, ?, ?)',
+          [appData.creator_id, 'quest_full', `Your quest ${appData.title} is now fully manned!`, appData.quest_id]
+        );
+      }
+    }
+    
+    res.json({ message: `Application ${status}` });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update application' });
+  }
+});
+
+app.delete('/api/applications/:id', authenticateToken, async (req, res) => {
+  try {
+    const apps = await db.run(`
+      SELECT a.*, q.creator_id, q.filled_slots 
+      FROM applications a 
+      JOIN quests q ON a.quest_id = q.id 
+      WHERE a.id = ?
+    `, [req.params.id]);
+    
+    if (apps.length === 0) return res.status(404).json({ error: 'Application not found' });
+    const appData = apps[0];
+    
+    if (appData.creator_id !== req.user.id) return res.status(403).json({ error: 'Unauthorized' });
+
+    await db.run('DELETE FROM applications WHERE id = ?', [req.params.id]);
+
+    if (appData.status === 'accepted') {
+      await db.run('UPDATE quests SET filled_slots = MAX(1, filled_slots - 1) WHERE id = ?', [appData.quest_id]);
+    }
+    
+    res.json({ message: 'Member removed' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to remove member' });
+  }
+});
+
+app.get('/api/notifications', authenticateToken, async (req, res) => {
+  try {
+    const notifications = await db.run('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC', [req.user.id]);
+    res.json(notifications);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch notifications' });
+  }
+});
+
+app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
+  try {
+    await db.run('UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?', [req.params.id, req.user.id]);
+    res.json({ message: 'Notification marked as read' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update notification' });
+  }
+});
+
 app.get('/api/matches/:match_id/messages', authenticateToken, async (req, res) => {
   try {
     const messages = await db.run('SELECT * FROM messages WHERE match_id = ? ORDER BY created_at ASC', [req.params.match_id]);
@@ -232,7 +362,7 @@ app.get('/api/quests', async (req, res) => {
       JOIN users u ON q.creator_id = u.id
       ORDER BY q.created_at DESC
     `);
-    
+
     const parsed = quests.map(q => ({
       ...q,
       requirements: q.requirements ? JSON.parse(q.requirements) : {}
@@ -252,7 +382,7 @@ app.get('/api/quests/:id', async (req, res) => {
       JOIN users u ON q.creator_id = u.id
       WHERE q.id = ?
     `, [req.params.id]);
-    
+
     if (quests.length === 0) return res.status(404).json({ error: 'Quest not found' });
     
     const quest = {

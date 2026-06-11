@@ -46,7 +46,7 @@ const Login = () => {
             <input
               type="email"
               placeholder="e.g. striker@questmatch.io"
-              className="w-full px-6 py-4 bg-background border border-surface rounded-xl text-text-high placeholder:text-text-low/30 focus:outline-none focus:border-primary transition-colors shadow-inner"
+              className="w-full px-6 py-4 bg-background border border-surface rounded-xl text-text-high text-base placeholder:text-text-low/30 focus:outline-none focus:border-primary transition-colors shadow-inner"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -58,7 +58,7 @@ const Login = () => {
             <input
               type="password"
               placeholder="••••••••"
-              className="w-full px-6 py-4 bg-background border border-surface rounded-xl text-text-high placeholder:text-text-low/30 focus:outline-none focus:border-primary transition-colors shadow-inner"
+              className="w-full px-6 py-4 bg-background border border-surface rounded-xl text-text-high text-base placeholder:text-text-low/30 focus:outline-none focus:border-primary transition-colors shadow-inner"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
