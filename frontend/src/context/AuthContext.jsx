@@ -12,6 +12,20 @@ export const AuthProvider = ({ children }) => {
       setUser(JSON.parse(savedUser));
     }
     setLoading(false);
+
+    // Sync auth state across tabs
+    const handleStorageChange = (e) => {
+      if (e.key === 'user') {
+        if (e.newValue) {
+          setUser(JSON.parse(e.newValue));
+        } else {
+          setUser(null);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   const login = (userData, token) => {

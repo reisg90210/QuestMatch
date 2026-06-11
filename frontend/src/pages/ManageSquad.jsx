@@ -12,7 +12,7 @@ import {
   ShieldAlert,
   ArrowRight
 } from 'lucide-react';
-import { quests as questsApi } from '../services/api';
+import { quests as questsApi, applications as applicationsApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import VerifiedBadge from '../components/VerifiedBadge';
 
@@ -45,16 +45,22 @@ const ManageSquad = () => {
 
   const handleUpdateStatus = async (appId, status) => {
     try {
-      await questsApi.updateApplicationStatus(appId, status);
+      await applicationsApi.updateStatus(appId, status);
       fetchSquadData(); // Refresh list
     } catch (err) {
       console.error('Failed to update status:', err);
+      alert(err.response?.data?.error || 'Failed to update status');
     }
   };
 
   const handleRemoveMember = async (appId) => {
     if (window.confirm('Remove this member from the squad?')) {
-      handleUpdateStatus(appId, 'rejected');
+      try {
+        await applicationsApi.remove(appId);
+        fetchSquadData();
+      } catch (err) {
+        console.error('Failed to remove member:', err);
+      }
     }
   };
 

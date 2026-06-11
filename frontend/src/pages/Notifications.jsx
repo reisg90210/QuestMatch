@@ -12,6 +12,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { notifications as notificationsApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import emptyNotifications from '../assets/empty_state_notifications.png';
 
 const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
@@ -107,7 +108,7 @@ const Notifications = () => {
               <div className="relative w-64 h-64 mx-auto mb-6">
                  <div className="absolute inset-0 bg-secondary/10 blur-3xl rounded-full animate-pulse" />
                  <img 
-                   src="/src/assets/empty_state_notifications.png" 
+                   src={emptyNotifications} 
                    alt="No activity" 
                    className="relative z-10 w-full h-full object-contain opacity-80" 
                  />
