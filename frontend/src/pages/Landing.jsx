@@ -101,7 +101,7 @@ const Landing = () => {
           <div className="absolute -inset-4 bg-secondary/20 blur-3xl rounded-full" />
           <div className="relative border border-surface-light/20 rounded-2xl overflow-hidden shadow-2xl shadow-secondary/10 max-h-[300px] lg:max-h-none">
             <img 
-              src="https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&q=80&w=1000" 
+              src="/src/assets/landing_hero_branded.png" 
               alt="Gaming Collaboration" 
               className="w-full h-full object-cover"
             />
