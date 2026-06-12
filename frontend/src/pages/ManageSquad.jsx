@@ -73,7 +73,7 @@ const ManageSquad = () => {
 
   return (
     <div className="flex-1 bg-background overflow-y-auto pb-32">
-      <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b border-white/5 p-6">
+      <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b border-white/5 p-6 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
         <div className="flex items-center gap-4 max-w-2xl mx-auto">
           <button onClick={() => navigate(-1)} className="text-text-low hover:text-white transition-colors">
             <ChevronLeft size={24} />
@@ -82,7 +82,10 @@ const ManageSquad = () => {
              <h2 className="text-xl font-rajdhani font-bold text-white uppercase tracking-tight truncate">
                Squad Management
              </h2>
-             <p className="text-[10px] text-primary font-black uppercase tracking-widest truncate">{quest.title}</p>
+             <p className="text-[10px] text-primary font-black uppercase tracking-widest truncate flex items-center gap-2">
+               <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+               {quest.title}
+             </p>
           </div>
         </div>
       </div>
