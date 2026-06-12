@@ -170,17 +170,17 @@ const ManageSquad = () => {
            </h3>
            <div className="grid gap-3">
               {/* Leader always at top */}
-              <div className="p-4 bg-surface-light/5 rounded-2xl border border-primary/30 flex items-center gap-4 relative overflow-hidden group">
+              <div className="p-4 bg-surface-light/5 rounded-2xl border border-primary/40 flex items-center gap-4 relative overflow-hidden group shadow-[0_0_20px_rgba(0,245,255,0.05)]">
                   <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
                     <Zap size={64} className="text-primary fill-primary" />
                   </div>
                   <div className="relative">
                     <img
                       src={user.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`}
-                      className="w-12 h-12 rounded-full border-2 border-primary shadow-[0_0_15px_rgba(0,255,255,0.3)]"
+                      className="w-12 h-12 rounded-full border-2 border-primary shadow-[0_0_15px_rgba(0,255,255,0.4)]"
                       alt=""
                     />
-                    <div className="absolute -bottom-1 -right-1 bg-primary p-1 rounded-full text-background">
+                    <div className="absolute -bottom-1 -right-1 bg-primary p-1 rounded-full text-background animate-pulse">
                        <Zap size={10} fill="currentColor" strokeWidth={3} />
                     </div>
                   </div>

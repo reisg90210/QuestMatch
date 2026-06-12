@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import VerifiedBadge from '../components/VerifiedBadge';
 import FilterSidebar from '../components/FilterSidebar';
 import { discovery, quests, swipes } from '../services/api';
+import radarImg from '../assets/empty_state_radar.png';
 
 const Discover = () => {
   const { user } = useAuth();
@@ -107,11 +108,11 @@ const Discover = () => {
       <div className="flex-1 bg-background flex flex-col items-center justify-center p-8 text-center">
         <div className="relative w-72 h-72 mb-8">
            <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-full animate-pulse" />
-           <img 
-             src="/src/assets/empty_state_radar.png" 
-             alt="No signals" 
-             className="relative z-10 w-full h-full object-contain opacity-80" 
-           />
+           <img
+                            src={radarImg}
+                            alt="No signals"
+                            className="relative z-10 w-full h-full object-contain opacity-80"
+                          />
         </div>
         <h2 className="text-3xl font-rajdhani font-bold text-white uppercase tracking-tight">Sector Fully Scanned</h2>
         <p className="text-text-low font-medium mt-2 max-w-xs mx-auto text-sm">
@@ -347,7 +348,7 @@ const Discover = () => {
                     <span className="text-xl font-normal text-primary">LVL 24</span>
                   </h2>
                   {currentItem.is_premium && (
-                    <div className="flex items-center gap-1.5 mt-1 text-secondary font-bold text-xs uppercase tracking-[0.2em]">
+                    <div className="flex items-center gap-1.5 mt-1 text-secondary font-bold text-xs uppercase tracking-[0.2em] animate-pulse">
                       <Zap size={14} fill="currentColor" />
                       Elite Questor
                     </div>

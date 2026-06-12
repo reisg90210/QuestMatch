@@ -129,7 +129,7 @@ const Profile = () => {
           
           <div className="mt-2 flex flex-col items-center gap-2">
             {profile.is_premium ? (
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary font-bold text-[10px] uppercase tracking-widest shadow-[0_0_15px_rgba(0,245,255,0.1)]">
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary font-bold text-[10px] uppercase tracking-widest shadow-[0_0_15px_rgba(0,245,255,0.1)] animate-pulse">
                 <Zap size={12} fill="currentColor" />
                 Elite Questor
               </div>

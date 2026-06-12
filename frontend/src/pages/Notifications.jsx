@@ -12,6 +12,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { notifications as notificationsApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import emptyNotificationsImg from '../assets/empty_state_notifications.png';
 
 const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
@@ -106,11 +107,11 @@ const Notifications = () => {
             >
               <div className="relative w-64 h-64 mx-auto mb-6">
                  <div className="absolute inset-0 bg-secondary/10 blur-3xl rounded-full animate-pulse" />
-                 <img 
-                   src="/src/assets/empty_state_notifications.png" 
-                   alt="No activity" 
-                   className="relative z-10 w-full h-full object-contain opacity-80" 
-                 />
+                 <img
+                                        src={emptyNotificationsImg}
+                                        alt="No activity"
+                                        className="relative z-10 w-full h-full object-contain opacity-80"
+                                      />
               </div>
               <h2 className="text-2xl font-rajdhani font-bold text-white uppercase tracking-tight">Radio Silence</h2>
               <p className="text-text-low font-medium mt-2 max-w-xs mx-auto text-sm">Your comms-link is clear. New signals will appear here as they arrive.</p>
@@ -153,7 +154,7 @@ const Notifications = () => {
                           {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                        </span>
                        {!n.is_read && (
-                          <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(0,255,255,0.8)]" />
+                          <div className="w-2.5 h-2.5 rounded-full bg-primary shadow-[0_0_12px_rgba(0,255,255,1)] animate-pulse" />
                        )}
                     </div>
                   </div>

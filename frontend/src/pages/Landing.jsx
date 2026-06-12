@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Shield, Users, Sword, Trophy, Menu, X } from 'lucide-react';
+import heroImg from '../assets/landing_hero_branded.png';
 
 const Landing = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -101,7 +102,7 @@ const Landing = () => {
           <div className="absolute -inset-4 bg-secondary/20 blur-3xl rounded-full" />
           <div className="relative border border-surface-light/20 rounded-2xl overflow-hidden shadow-2xl shadow-secondary/10 max-h-[300px] lg:max-h-none">
             <img 
-              src="/src/assets/landing_hero_branded.png" 
+              src={heroImg} 
               alt="Gaming Collaboration" 
               className="w-full h-full object-cover"
             />

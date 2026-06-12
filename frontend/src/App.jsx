@@ -12,6 +12,7 @@ import QuestDetails from './pages/QuestDetails';
 import ManageSquad from './pages/ManageSquad';
 import Notifications from './pages/Notifications';
 import Premium from './pages/Premium';
+import Community from './pages/Community';
 import Navbar from './components/Navbar';
 
 const PublicRoute = ({ children }) => {
@@ -47,6 +48,7 @@ function App() {
                     <Route path="/manage-squad/:id" element={<ManageSquad />} />
                     <Route path="/notifications" element={<Notifications />} />
                     <Route path="/premium" element={<Premium />} />
+                    <Route path="/community" element={<Community />} />
                     <Route path="/" element={<Navigate to="/discover" replace />} />
                   </Routes>
                   <Navbar />

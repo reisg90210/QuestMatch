@@ -16,6 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import { matches as matchesApi, messages as messagesApi } from '../services/api';
 import VerifiedBadge from '../components/VerifiedBadge';
 import FilterSidebar from '../components/FilterSidebar';
+import radarImg from '../assets/empty_state_radar.png';
 
 const Matches = () => {
   const [matches, setMatches] = useState([]);
@@ -192,7 +193,7 @@ const Matches = () => {
             <div className="relative w-64 h-64 mx-auto mb-6">
                <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-full animate-pulse" />
                <img 
-                 src="/src/assets/empty_state_radar.png" 
+                 src={radarImg} 
                  alt="No squads" 
                  className="relative z-10 w-full h-full object-contain opacity-80" 
                />
