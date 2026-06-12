@@ -10,12 +10,15 @@ import {
   Phone,
   Video,
   ShieldCheck,
-  Zap
+  Zap,
+  AlertCircle
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { matches as matchesApi, messages as messagesApi } from '../services/api';
 import VerifiedBadge from '../components/VerifiedBadge';
 import FilterSidebar from '../components/FilterSidebar';
+import radarEmpty from '../assets/empty_state_radar.png';
 
 const Matches = () => {
   const [matches, setMatches] = useState([]);
@@ -23,6 +26,7 @@ const Matches = () => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState({
     game: 'all',
@@ -31,6 +35,7 @@ const Matches = () => {
   });
 
   const { user } = useAuth();
+  const navigate = useNavigate();
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -48,11 +53,14 @@ const Matches = () => {
   }, [messages]);
 
   const fetchMatches = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const response = await matchesApi.list();
       setMatches(response.data);
     } catch (err) {
       console.error('Failed to fetch matches:', err);
+      setError('Signal disruption: Could not retrieve your active squads.');
     } finally {
       setLoading(false);
     }
@@ -184,24 +192,43 @@ const Matches = () => {
 
       <div className="px-4 max-w-lg mx-auto">
         {loading ? (
-          <div className="py-20 flex justify-center">
-            <div className="w-12 h-12 border-4 border-surface border-t-primary rounded-full animate-spin" />
+          <div className="py-20 flex flex-col items-center justify-center space-y-4">
+            <div className="w-12 h-12 border-4 border-surface border-t-primary rounded-full animate-spin shadow-[0_0_15px_rgba(0,255,255,0.2)]" />
+            <p className="text-[10px] text-primary font-black uppercase tracking-[0.2em] animate-pulse">Syncing Squads...</p>
+          </div>
+        ) : error ? (
+          <div className="py-20 text-center space-y-6">
+            <div className="w-20 h-20 bg-alert/10 rounded-full flex items-center justify-center text-alert border border-alert/20 mx-auto">
+              <AlertCircle size={40} />
+            </div>
+            <div>
+              <h2 className="text-white font-rajdhani font-black text-2xl uppercase tracking-wider">Uplink Failed</h2>
+              <p className="text-slate-500 mt-2 max-w-xs mx-auto text-sm">{error}</p>
+            </div>
+            <button 
+              onClick={fetchMatches}
+              className="px-8 py-3 bg-primary text-obsidian font-bold rounded-xl uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
+            >
+              Retry Connection
+            </button>
           </div>
         ) : matches.length === 0 ? (
           <div className="py-12 text-center">
             <div className="relative w-64 h-64 mx-auto mb-6">
                <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-full animate-pulse" />
-               <img 
-                 src="/src/assets/empty_state_radar.png" 
-                 alt="No squads" 
-                 className="relative z-10 w-full h-full object-contain opacity-80" 
+               <img
+                 src={radarEmpty}
+                 alt="No squads"
+                 className="relative z-10 w-full h-full object-contain brightness-110 drop-shadow-[0_0_30px_rgba(0,255,255,0.3)]"
                />
             </div>
-            <h2 className="text-2xl font-rajdhani font-bold text-white uppercase tracking-tight">Radar Clear</h2>
-            <p className="text-text-low font-medium mt-2 max-w-xs mx-auto text-sm">No tactical matches yet. Head back to Discovery to find your next squad.</p>
+            <h2 className="text-3xl font-rajdhani font-black text-white uppercase tracking-tight italic">
+              RADAR <span className="text-primary">CLEAR</span>
+            </h2>
+            <p className="text-slate-500 font-medium mt-2 max-w-xs mx-auto text-sm">No tactical matches yet. Head back to Discovery to find your next squad.</p>
             <button 
               onClick={() => navigate('/discover')}
-              className="mt-8 px-8 py-3 bg-primary/10 border border-primary/20 text-primary font-bold rounded-xl uppercase tracking-widest text-xs hover:bg-primary hover:text-background transition-all"
+              className="mt-8 px-8 py-4 bg-primary text-background font-black rounded-xl uppercase tracking-widest hover:brightness-110 transition-all shadow-[0_0_20px_rgba(0,255,255,0.3)]"
             >
               Start Discovery
             </button>

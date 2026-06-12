@@ -136,7 +136,7 @@ app.get('/api/discover', authenticateToken, async (req, res) => {
     const potentialMatches = await db.run(`
       SELECT id, username, bio, platforms, games, skill_level, avatar_url, is_premium, is_verified
       FROM users
-
+      WHERE id != ?
       AND id NOT IN (SELECT swiped_id FROM swipes WHERE swiper_id = ?)
       LIMIT 20
     `, [req.user.id, req.user.id]);
@@ -245,10 +245,19 @@ app.put('/api/applications/:id', authenticateToken, async (req, res) => {
     
     if (appData.creator_id !== req.user.id) return res.status(403).json({ error: 'Unauthorized' });
 
-    await db.run('UPDATE applications SET status = ? WHERE id = ?', [status, req.params.id]);
-
     if (status === 'accepted') {
-      await db.run('UPDATE quests SET filled_slots = filled_slots + 1 WHERE id = ?', [appData.quest_id]);
+      // Atomic increment and capacity check using RETURNING
+      const updateResult = await db.run(
+        'UPDATE quests SET filled_slots = filled_slots + 1 WHERE id = ? AND filled_slots < total_slots RETURNING filled_slots, total_slots',
+        [appData.quest_id]
+      );
+      
+      if (updateResult.length === 0) {
+        return res.status(400).json({ error: 'Quest is already full.' });
+      }
+
+      const newFilledSlots = updateResult[0].filled_slots;
+      const totalSlots = updateResult[0].total_slots;
       
       // Notify applicant
       await db.run(
@@ -257,13 +266,15 @@ app.put('/api/applications/:id', authenticateToken, async (req, res) => {
       );
       
       // Check if quest is now full
-      if (appData.filled_slots + 1 >= appData.total_slots) {
+      if (newFilledSlots >= totalSlots) {
          await db.run(
           'INSERT INTO notifications (user_id, type, content, quest_id) VALUES (?, ?, ?, ?)',
           [appData.creator_id, 'quest_full', `Your quest ${appData.title} is now fully manned!`, appData.quest_id]
         );
       }
     }
+
+    await db.run('UPDATE applications SET status = ? WHERE id = ?', [status, req.params.id]);
     
     res.json({ message: `Application ${status}` });
   } catch (error) {
@@ -303,6 +314,15 @@ app.get('/api/notifications', authenticateToken, async (req, res) => {
     res.json(notifications);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch notifications' });
+  }
+});
+
+app.get('/api/notifications/unread-count', authenticateToken, async (req, res) => {
+  try {
+    const results = await db.run('SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0', [req.user.id]);
+    res.json({ count: results[0].count });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch unread count' });
   }
 });
 

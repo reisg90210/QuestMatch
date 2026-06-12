@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
-import { Heart, X, Star, Users, Gamepad2, Clock, Trophy, Sliders, Zap } from 'lucide-react';
+import { Heart, X, Star, Users, Gamepad2, Clock, Trophy, Sliders, Zap, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import VerifiedBadge from '../components/VerifiedBadge';
 import FilterSidebar from '../components/FilterSidebar';
 import { discovery, quests, swipes } from '../services/api';
+import radarEmpty from '../assets/empty_state_radar.png';
 
 const Discover = () => {
   const { user } = useAuth();
@@ -13,6 +14,7 @@ const Discover = () => {
   const [items, setItems] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [swipeDirection, setSwipeDirection] = useState(null);
   const [showMatchOverlay, setShowMatchOverlay] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -26,32 +28,37 @@ const Discover = () => {
   const likeOpacity = useTransform(x, [20, 100], [0, 1]);
   const dislikeOpacity = useTransform(x, [-100, -20], [1, 0]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [usersRes, questsRes] = await Promise.all([
-          discovery.getPotentialMatches(),
-          quests.list()
-        ]);
-        
-        const others = usersRes.data.filter(u => u.id !== user.id);
-        const activeQuests = questsRes.data.filter(q => q.creator_id !== user.id);
-        
-        // Interleave users and quests
-        const combined = [];
-        const maxLen = Math.max(others.length, activeQuests.length);
-        for (let i = 0; i < maxLen; i++) {
-          if (others[i]) combined.push({ ...others[i], itemType: 'user' });
-          if (activeQuests[i]) combined.push({ ...activeQuests[i], itemType: 'quest' });
-        }
-        
-        setItems(combined);
-      } catch (err) {
-        console.error('Failed to fetch discovery data:', err);
-      } finally {
-        setLoading(false);
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [usersRes, questsRes] = await Promise.all([
+        discovery.getPotentialMatches(),
+        quests.list()
+      ]);
+      
+      const others = usersRes.data.filter(u => u.id !== user.id);
+      const activeQuests = questsRes.data.filter(q => q.creator_id !== user.id);
+      
+      // Interleave users and quests
+      const combined = [];
+      const maxLen = Math.max(others.length, activeQuests.length);
+      for (let i = 0; i < maxLen; i++) {
+        if (others[i]) combined.push({ ...others[i], itemType: 'user' });
+        if (activeQuests[i]) combined.push({ ...activeQuests[i], itemType: 'quest' });
       }
-    };
+      
+      setItems(combined);
+      setCurrentIndex(0);
+    } catch (err) {
+      console.error('Failed to fetch discovery data:', err);
+      setError('Signal interference detected. Unable to reach the grid.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, [user.id]);
 
@@ -100,6 +107,40 @@ const Discover = () => {
     );
   }
 
+  if (loading) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-background">
+        <div className="relative">
+          <div className="w-24 h-24 border-4 border-primary/20 rounded-full animate-ping absolute" />
+          <div className="w-24 h-24 border-t-4 border-primary rounded-full animate-spin relative" />
+        </div>
+        <div className="mt-8 text-primary font-rajdhani font-bold text-xl uppercase tracking-[0.2em] animate-pulse">
+          Scanning Local Grid...
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-6">
+        <div className="w-20 h-20 bg-alert/10 rounded-full flex items-center justify-center text-alert border border-alert/20">
+          <AlertCircle size={40} />
+        </div>
+        <div>
+          <h2 className="text-white font-rajdhani font-black text-2xl uppercase tracking-wider">Comms Error</h2>
+          <p className="text-slate-500 mt-2 max-w-xs mx-auto">{error}</p>
+        </div>
+        <button 
+          onClick={fetchData}
+          className="px-8 py-3 bg-primary text-obsidian font-bold rounded-xl uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
+        >
+          Re-initialize Scan
+        </button>
+      </div>
+    );
+  }
+
   const currentItem = items[currentIndex];
 
   if (!currentItem) {
@@ -108,21 +149,31 @@ const Discover = () => {
         <div className="relative w-72 h-72 mb-8">
            <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-full animate-pulse" />
            <img 
-             src="/src/assets/empty_state_radar.png" 
+             src={radarEmpty} 
              alt="No signals" 
-             className="relative z-10 w-full h-full object-contain opacity-80" 
+             className="relative z-10 w-full h-full object-contain brightness-110 drop-shadow-[0_0_30px_rgba(0,255,255,0.3)]" 
            />
         </div>
-        <h2 className="text-3xl font-rajdhani font-bold text-white uppercase tracking-tight">Sector Fully Scanned</h2>
-        <p className="text-text-low font-medium mt-2 max-w-xs mx-auto text-sm">
-          Zero signals detected in this quadrant. Broaden your search parameters or check back for new recruits later.
+        <h2 className="text-4xl font-rajdhani font-black text-white uppercase tracking-tight italic">
+          GRID <span className="text-primary">DEPLETED</span>
+        </h2>
+        <p className="text-slate-500 font-medium mt-2 max-w-xs mx-auto text-sm">
+          You've cleared the immediate quadrant. Check back soon for new quest beacons or expand your scan.
         </p>
-        <button
-          onClick={() => setCurrentIndex(0)}
-          className="mt-10 px-10 py-4 bg-primary text-background font-black rounded-xl hover:brightness-110 transition-all uppercase tracking-widest shadow-[0_0_30px_rgba(0,245,255,0.4)]"
-        >
-          RESET RADAR
-        </button>
+        <div className="mt-10 flex flex-col gap-3 w-full max-w-xs">
+          <button
+            onClick={() => navigate('/create-quest')}
+            className="w-full py-4 bg-primary text-background font-black rounded-xl hover:brightness-110 transition-all uppercase tracking-widest shadow-[0_0_30px_rgba(0,245,255,0.4)]"
+          >
+            POST YOUR OWN BEACON
+          </button>
+          <button
+            onClick={() => setCurrentIndex(0)}
+            className="w-full py-4 bg-transparent border border-slate-800 text-slate-400 font-bold rounded-xl hover:bg-slate-800 transition-all uppercase tracking-widest"
+          >
+            RESET RADAR
+          </button>
+        </div>
       </div>
     );
   }

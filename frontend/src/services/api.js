@@ -56,6 +56,7 @@ export const applications = {
 
 export const notifications = {
   list: () => api.get('/notifications'),
+  getUnreadCount: () => api.get('/notifications/unread-count'),
   markAsRead: (id) => api.put(`/notifications/${id}/read`),
 };
 

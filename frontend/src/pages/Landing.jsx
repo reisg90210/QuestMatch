@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Shield, Users, Sword, Trophy, Menu, X } from 'lucide-react';
+import heroImg from '../assets/landing_hero_branded.png';
+import communityHeroBanner from '../assets/community_hero_banner.png';
 
 const Landing = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -100,12 +102,13 @@ const Landing = () => {
         <div className="flex-1 relative order-1 lg:order-2 w-full max-w-2xl mx-auto lg:max-w-none">
           <div className="absolute -inset-4 bg-secondary/20 blur-3xl rounded-full" />
           <div className="relative border border-surface-light/20 rounded-2xl overflow-hidden shadow-2xl shadow-secondary/10 max-h-[300px] lg:max-h-none">
-            <img 
-              src="/src/assets/landing_hero_branded.png" 
-              alt="Gaming Collaboration" 
+            <img
+              src={heroImg}
+              alt="Gaming Collaboration"
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+
           </div>
         </div>
 

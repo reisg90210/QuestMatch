@@ -9,18 +9,34 @@ const Navbar = () => {
   const [unreadCount, setUnreadCount] = React.useState(0);
 
   React.useEffect(() => {
+    let interval;
     const fetchUnread = async () => {
       try {
-        const response = await notificationsApi.list();
-        const unread = response.data.filter(n => !n.is_read).length;
-        setUnreadCount(unread);
+        const response = await notificationsApi.getUnreadCount();
+        setUnreadCount(response.data.count);
       } catch (err) {
         console.error('Failed to fetch notifications count:', err);
       }
     };
+    
+    // Only poll if tab is visible to save resources
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        clearInterval(interval);
+      } else {
+        fetchUnread();
+        interval = setInterval(fetchUnread, 30000);
+      }
+    };
+
     fetchUnread();
-    const interval = setInterval(fetchUnread, 30000); // Check every 30s
-    return () => clearInterval(interval);
+    interval = setInterval(fetchUnread, 30000);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   const navItems = [
