@@ -4,5 +4,9 @@ dist/
 build/
 .DS_Store
 *.log
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
 frontend/node_modules/
 backend/node_modules/

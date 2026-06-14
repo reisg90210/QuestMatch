@@ -14,7 +14,7 @@ app.use(express.json());
 const initDB = async () => {
   try {
     console.log('Ensuring database tables exist...');
-    await db.run('CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL, email TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, bio TEXT, platforms TEXT, games TEXT, skill_level TEXT, avatar_url TEXT, is_premium BOOLEAN DEFAULT 0, is_verified BOOLEAN DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)');
+    await db.run('CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL, email TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, bio TEXT, platforms TEXT, games TEXT, skill_level TEXT, avatar_url TEXT, is_premium BOOLEAN DEFAULT 0, is_verified BOOLEAN DEFAULT 0, referrer_id TEXT, referrals_count INTEGER DEFAULT 0, first_quest_completed BOOLEAN DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)');
     
     // Migration: Add columns if they don't exist
     try {
@@ -22,6 +22,15 @@ const initDB = async () => {
     } catch (e) { /* already exists */ }
     try {
       await db.run('ALTER TABLE users ADD COLUMN is_verified BOOLEAN DEFAULT 0');
+    } catch (e) { /* already exists */ }
+    try {
+      await db.run('ALTER TABLE users ADD COLUMN referrer_id TEXT');
+    } catch (e) { /* already exists */ }
+    try {
+      await db.run('ALTER TABLE users ADD COLUMN referrals_count INTEGER DEFAULT 0');
+    } catch (e) { /* already exists */ }
+    try {
+      await db.run('ALTER TABLE users ADD COLUMN first_quest_completed BOOLEAN DEFAULT 0');
     } catch (e) { /* already exists */ }
     await db.run('CREATE TABLE IF NOT EXISTS swipes (id INTEGER PRIMARY KEY AUTOINCREMENT, swiper_id TEXT NOT NULL, swiped_id TEXT NOT NULL, direction TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(swiper_id) REFERENCES users(id), FOREIGN KEY(swiped_id) REFERENCES users(id), UNIQUE(swiper_id, swiped_id))');
     await db.run('CREATE TABLE IF NOT EXISTS matches (id INTEGER PRIMARY KEY AUTOINCREMENT, user1_id TEXT NOT NULL, user2_id TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(user1_id) REFERENCES users(id), FOREIGN KEY(user2_id) REFERENCES users(id), UNIQUE(user1_id, user2_id))');
@@ -58,7 +67,7 @@ app.get('/health', (req, res) => {
 
 // Auth Routes
 app.post('/api/auth/signup', async (req, res) => {
-  const { username, email, password } = req.body;
+  const { username, email, password, referrer_id } = req.body;
   if (!username || !email || !password) return res.status(400).json({ error: 'Missing fields' });
 
   try {
@@ -66,7 +75,7 @@ app.post('/api/auth/signup', async (req, res) => {
     await initDB();
     const passwordHash = await bcrypt.hash(password, 10);
     const id = uuidv4();
-    await db.run('INSERT INTO users (id, username, email, password_hash) VALUES (?, ?, ?, ?)', [id, username, email, passwordHash]);
+    await db.run('INSERT INTO users (id, username, email, password_hash, referrer_id) VALUES (?, ?, ?, ?, ?)', [id, username, email, passwordHash, referrer_id || null]);
     res.status(201).json({ message: 'User created', id });
   } catch (error) {
     console.error('Signup Error:', error);
@@ -94,7 +103,7 @@ app.post('/api/auth/login', async (req, res) => {
 // User Profile Routes
 app.get('/api/users/profile', authenticateToken, async (req, res) => {
   try {
-    const users = await db.run('SELECT id, username, email, bio, platforms, games, skill_level, avatar_url, is_premium, is_verified FROM users WHERE id = ?', [req.user.id]);
+    const users = await db.run('SELECT id, username, email, bio, platforms, games, skill_level, avatar_url, is_premium, is_verified, referrer_id, referrals_count, first_quest_completed FROM users WHERE id = ?', [req.user.id]);
     res.json(users[0]);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch profile' });
@@ -231,7 +240,7 @@ app.get('/api/quests/:id/applications', authenticateToken, async (req, res) => {
 });
 
 app.put('/api/applications/:id', authenticateToken, async (req, res) => {
-  const { status } = req.body; // 'accepted' or 'rejected'
+  const { status } = req.body; // 'accepted', 'rejected', or 'completed'
   try {
     const apps = await db.run(`
       SELECT a.*, q.creator_id, q.title, q.total_slots, q.filled_slots 
@@ -272,12 +281,55 @@ app.put('/api/applications/:id', authenticateToken, async (req, res) => {
           [appData.creator_id, 'quest_full', `Your quest ${appData.title} is now fully manned!`, appData.quest_id]
         );
       }
+    } else if (status === 'completed') {
+      // Referral Logic
+      const users = await db.run('SELECT referrer_id, first_quest_completed FROM users WHERE id = ?', [appData.applicant_id]);
+      const user = users[0];
+      
+      if (user && !user.first_quest_completed && user.referrer_id) {
+        // Mark first quest as completed for the referee
+        await db.run('UPDATE users SET first_quest_completed = 1 WHERE id = ?', [appData.applicant_id]);
+        
+        // Increment referrer's count
+        await db.run('UPDATE users SET referrals_count = referrals_count + 1 WHERE id = ?', [user.referrer_id]);
+        
+        // Check milestones for referrer
+        const referrers = await db.run('SELECT id, username, referrals_count FROM users WHERE id = ?', [user.referrer_id]);
+        const referrer = referrers[0];
+        
+        if (referrer) {
+          const count = referrer.referrals_count;
+          let milestone = null;
+          if (count === 1) milestone = 'Scout';
+          else if (count === 3) milestone = 'Commander';
+          else if (count === 10) milestone = 'Legend';
+          
+          if (milestone) {
+            console.log(`REFERRAL MILESTONE: User ${referrer.username} reached ${milestone} tier (${count} referrals)`);
+            // In a real app, we'd add rewards here. For now, we log and could send a notification.
+            await db.run(
+              'INSERT INTO notifications (user_id, type, content) VALUES (?, ?, ?)',
+              [referrer.id, 'referral_milestone', `Congratulations! You've reached the ${milestone} tier with ${count} successful referrals.`]
+            );
+          }
+        }
+      } else if (user && !user.first_quest_completed) {
+        // Even if no referrer, mark first quest as completed
+        await db.run('UPDATE users SET first_quest_completed = 1 WHERE id = ?', [appData.applicant_id]);
+      }
+      
+      // Notify applicant of completion
+      await db.run(
+        'INSERT INTO notifications (user_id, type, content, quest_id, sender_id) VALUES (?, ?, ?, ?, ?)',
+        [appData.applicant_id, 'quest_completed', `Congratulations! You've successfully completed the quest: ${appData.title}.`, appData.quest_id, req.user.id]
+      );
     }
 
     await db.run('UPDATE applications SET status = ? WHERE id = ?', [status, req.params.id]);
     
     res.json({ message: `Application ${status}` });
   } catch (error) {
+    console.error('Update Application Error:', error);
     res.status(500).json({ error: 'Failed to update application' });
   }
 });
@@ -365,7 +417,7 @@ app.post('/api/quests', authenticateToken, async (req, res) => {
     const id = uuidv4();
     await db.run(
       'INSERT INTO quests (id, creator_id, game_id, quest_type, title, description, requirements, start_time, total_slots) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [id, req.user.id, game_id, quest_type, title, description, JSON.stringify(requirements), start_time, total_slots]
+      [id, req.user.id, game_id, quest_type, title, description || null, JSON.stringify(requirements || {}), start_time || null, total_slots]
     );
     res.status(201).json({ message: 'Quest created', id });
   } catch (error) {

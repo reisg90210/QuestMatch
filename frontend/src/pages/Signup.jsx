@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { auth } from '../services/api';
 
 const Signup = () => {
@@ -7,12 +7,14 @@ const Signup = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const referrer_id = searchParams.get('ref');
     try {
-      await auth.signup({ username, email, password });
+      await auth.signup({ username, email, password, referrer_id });
       navigate('/login');
     } catch (err) {
       setError(err.response?.data?.error || 'Signup failed');

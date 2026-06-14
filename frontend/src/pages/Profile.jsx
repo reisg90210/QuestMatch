@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { users } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, Save, Camera, Check, X, ShieldCheck, Zap } from 'lucide-react';
+import { LogOut, Save, Camera, Check, X, ShieldCheck, Zap, Copy, Award } from 'lucide-react';
 import VerifiedBadge from '../components/VerifiedBadge';
 import { useNavigate } from 'react-router-dom';
 
@@ -15,12 +15,22 @@ const Profile = () => {
     skill_level: 'Casual',
     avatar_url: '',
     is_premium: false,
-    is_verified: false
+    is_verified: false,
+    referrals_count: 0
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const referralLink = `${window.location.origin}/signup?ref=${user?.id}`;
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(referralLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const allPlatforms = ["PC", "PS5", "Xbox", "Nintendo Switch", "Mobile"];
   const allGames = [
@@ -233,6 +243,68 @@ const Profile = () => {
                   </div>
                 );
               })}
+          </div>
+        </section>
+
+        {/* Squad Link Section */}
+        <section className="space-y-4 bg-surface/40 p-6 rounded-[2.5rem] border border-primary/20 backdrop-blur-sm shadow-[0_0_40px_rgba(0,245,255,0.05)]">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-primary text-xs font-black uppercase tracking-[0.4em] font-rajdhani flex items-center gap-2">
+              <Award size={16} /> Squad Link
+            </h3>
+            <div className="px-3 py-1 rounded-full bg-primary text-background font-black text-[10px] uppercase tracking-widest animate-pulse">
+              Level Up
+            </div>
+          </div>
+
+          <p className="text-text-low text-xs leading-relaxed font-medium">
+            Recruit new members to your squad. Earn exclusive badges and rewards for every successful deployment.
+          </p>
+
+          <div className="relative group">
+            <input 
+              readOnly
+              value={referralLink}
+              className="w-full px-5 py-4 bg-background border border-white/5 rounded-2xl text-text-low text-xs font-mono focus:outline-none shadow-inner pr-16"
+            />
+            <button 
+              onClick={handleCopyLink}
+              className="absolute right-2 top-2 bottom-2 px-4 bg-primary text-background rounded-xl flex items-center justify-center hover:brightness-110 active:scale-95 transition-all shadow-lg"
+            >
+              {copied ? <Check size={18} strokeWidth={3} /> : <Copy size={18} strokeWidth={3} />}
+            </button>
+          </div>
+
+          {/* Milestone Progress */}
+          <div className="space-y-4 mt-6">
+            <div className="flex justify-between items-end">
+              <span className="text-[10px] text-text-low font-black uppercase tracking-widest">Deployment Progress</span>
+              <span className="text-white font-rajdhani font-black text-lg italic">{profile.referrals_count || 0} <span className="text-text-low text-xs not-italic">RECRUITS</span></span>
+            </div>
+            
+            <div className="h-3 bg-background rounded-full overflow-hidden border border-white/5 p-0.5">
+              <div 
+                className="h-full bg-gradient-to-r from-primary to-secondary rounded-full shadow-[0_0_15px_rgba(0,245,255,0.5)] transition-all duration-1000"
+                style={{ width: `${Math.min(((profile.referrals_count || 0) / 10) * 100, 100)}%` }}
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 pt-2">
+              {[
+                { name: 'Scout', count: 1 },
+                { name: 'Commander', count: 3 },
+                { name: 'Legend', count: 10 }
+              ].map((tier) => {
+                const isAchieved = (profile.referrals_count || 0) >= tier.count;
+                return (
+                  <div key={tier.name} className={`flex flex-col items-center gap-1 p-2 rounded-xl border transition-all ${isAchieved ? 'bg-primary/5 border-primary/30' : 'bg-white/5 border-transparent opacity-40'}`}>
+                    <Award size={14} className={isAchieved ? 'text-primary' : 'text-text-low'} />
+                    <span className={`text-[8px] font-black uppercase tracking-tighter ${isAchieved ? 'text-white' : 'text-text-low'}`}>{tier.name}</span>
+                    <span className="text-[8px] text-text-low font-bold">{tier.count}</span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </section>
 
