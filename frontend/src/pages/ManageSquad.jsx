@@ -10,7 +10,10 @@ import {
   Zap,
   Trophy,
   ShieldAlert,
-  ArrowRight
+  ArrowRight,
+  Award,
+  Share2,
+  Copy
 } from 'lucide-react';
 import { quests as questsApi, applications as applicationsApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -24,6 +27,15 @@ const ManageSquad = () => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [copied, setCopied] = useState(false);
+
+  const referralLink = `${window.location.origin}/signup?ref=${user?.id}`;
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(referralLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   useEffect(() => {
     fetchSquadData();
@@ -113,6 +125,17 @@ const ManageSquad = () => {
              </h2>
              <p className="text-[10px] text-primary font-black uppercase tracking-widest truncate">{quest.title}</p>
           </div>
+          <button 
+            onClick={handleCopyLink}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all ${
+              copied 
+                ? 'bg-green-500 text-white shadow-[0_0_15px_rgba(34,197,94,0.4)]' 
+                : 'bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-background'
+            }`}
+          >
+            {copied ? <Check size={14} /> : <Share2 size={14} />}
+            {copied ? 'Copied' : 'Share Squad Link'}
+          </button>
         </div>
       </div>
 
@@ -241,13 +264,22 @@ const ManageSquad = () => {
                        </div>
                        <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">{app.skill_level} Member</div>
                     </div>
-                    <button
-                       onClick={() => handleRemoveMember(app.id)}
-                       className="w-10 h-10 rounded-xl hover:bg-alert/10 text-slate-600 hover:text-alert transition-all flex items-center justify-center"
-                       title="Remove Member"
-                    >
-                       <UserX size={18} />
-                    </button>
+          <div className="flex gap-2">
+                         <button
+                            onClick={() => handleUpdateStatus(app.id, 'completed')}
+                            className="w-10 h-10 rounded-xl bg-green-500/5 text-green-500 border border-green-500/10 flex items-center justify-center hover:bg-green-500 hover:text-white transition-all"
+                            title="Mark Completed"
+                         >
+                            <Award size={20} />
+                         </button>
+                         <button
+                            onClick={() => handleRemoveMember(app.id)}
+                            className="w-10 h-10 rounded-xl hover:bg-alert/10 text-slate-600 hover:text-alert transition-all flex items-center justify-center"
+                            title="Remove Member"
+                         >
+                            <UserX size={18} />
+                         </button>
+                    </div>
                 </motion.div>
               ))}
 

@@ -10,7 +10,10 @@ import {
   ShieldCheck,
   CheckCircle2,
   AlertCircle,
-  Zap
+  Zap,
+  Share2,
+  Copy,
+  Check
 } from 'lucide-react';
 import { quests as questsApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -25,6 +28,15 @@ const QuestDetails = () => {
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const referralLink = `${window.location.origin}/signup?ref=${user?.id}`;
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(referralLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const GAME_IMAGES = {
     'valorant': 'https://images.unsplash.com/photo-1624138784614-87fd1b6528f2?auto=format&fit=crop&q=80&w=1000',
@@ -110,12 +122,37 @@ const QuestDetails = () => {
           <ChevronLeft size={24} />
         </button>
 
-        {isCreator && (
+        {isCreator ? (
+          <div className="absolute top-6 right-6 flex items-center gap-2 z-20">
+            <button 
+              onClick={handleCopyLink}
+              className={`px-4 py-2 rounded-lg font-bold backdrop-blur-md border transition-all text-xs uppercase tracking-widest flex items-center gap-2 ${
+                copied 
+                  ? 'bg-green-500 border-green-500 text-white shadow-[0_0_15px_rgba(34,197,94,0.4)]' 
+                  : 'bg-background/60 border-white/10 text-white hover:text-primary'
+              }`}
+            >
+              {copied ? <Check size={14} /> : <Share2 size={14} />}
+              {copied ? 'Copied' : 'Share Squad Link'}
+            </button>
+            <button 
+              onClick={() => navigate(`/manage-squad/${quest.id}`)}
+              className="px-4 py-2 bg-secondary text-white font-bold rounded-lg backdrop-blur-md border border-secondary/50 hover:brightness-110 transition-all text-xs uppercase tracking-widest"
+            >
+              Manage Squad
+            </button>
+          </div>
+        ) : (
           <button 
-            onClick={() => navigate(`/manage-squad/${quest.id}`)}
-            className="absolute top-6 right-6 px-4 py-2 bg-secondary text-white font-bold rounded-lg backdrop-blur-md border border-secondary/50 hover:brightness-110 transition-all z-20 text-xs uppercase tracking-widest"
+            onClick={handleCopyLink}
+            className={`absolute top-6 right-6 px-4 py-2 rounded-lg font-bold backdrop-blur-md border transition-all text-xs uppercase tracking-widest flex items-center gap-2 z-20 ${
+              copied 
+                ? 'bg-green-500 border-green-500 text-white shadow-[0_0_15px_rgba(34,197,94,0.4)]' 
+                : 'bg-background/60 border-white/10 text-white hover:text-primary'
+            }`}
           >
-            Manage Squad
+            {copied ? <Check size={14} /> : <Share2 size={14} />}
+            {copied ? 'Copied' : 'Share Squad Link'}
           </button>
         )}
 

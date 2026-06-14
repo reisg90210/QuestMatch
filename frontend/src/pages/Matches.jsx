@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { matches as matchesApi, messages as messagesApi } from '../services/api';
+import { matches as matchesApi } from '../services/api';
 import VerifiedBadge from '../components/VerifiedBadge';
 import FilterSidebar from '../components/FilterSidebar';
 import radarEmpty from '../assets/empty_state_radar.png';
@@ -68,7 +68,7 @@ const Matches = () => {
 
   const fetchMessages = async (matchId) => {
     try {
-      const response = await messagesApi.list(matchId);
+      const response = await matchesApi.getMessages(matchId);
       setMessages(response.data);
     } catch (err) {
       console.error('Failed to fetch messages:', err);
@@ -80,7 +80,7 @@ const Matches = () => {
     if (!newMessage.trim() || !selectedMatch) return;
 
     try {
-      const response = await messagesApi.send(selectedMatch.id, newMessage);
+      const response = await matchesApi.sendMessage(selectedMatch.id, newMessage);
       setMessages([...messages, response.data]);
       setNewMessage('');
     } catch (err) {
