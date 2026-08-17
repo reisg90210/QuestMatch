@@ -47,11 +47,20 @@ const QuestDetails = () => {
     'destiny-2': 'https://images.unsplash.com/photo-1552820728-8b83bb6b773f?auto=format&fit=crop&q=80&w=1000',
   };
 
+  const [isMember, setIsMember] = useState(false);
+
   useEffect(() => {
     const fetchQuest = async () => {
       try {
         const response = await questsApi.getById(id);
         setQuest(response.data);
+        
+        // Check if user is an accepted member
+        const appsResponse = await questsApi.getApplications(id);
+        const userApp = appsResponse.data.find(app => app.applicant_id === user?.id);
+        if (userApp && userApp.status === 'accepted') {
+          setIsMember(true);
+        }
       } catch (err) {
         console.error('Failed to fetch quest:', err);
         setError('Mission data could not be retrieved.');
@@ -122,11 +131,11 @@ const QuestDetails = () => {
           <ChevronLeft size={24} />
         </button>
 
-        {isCreator ? (
+        {isCreator || isMember ? (
           <div className="absolute top-6 right-6 flex items-center gap-2 z-20">
             <button 
               onClick={handleCopyLink}
-              className={`px-4 py-2 rounded-lg font-bold backdrop-blur-md border transition-all text-xs uppercase tracking-widest flex items-center gap-2 ${
+              className={`hidden md:flex px-4 py-2 rounded-lg font-bold backdrop-blur-md border transition-all text-xs uppercase tracking-widest items-center gap-2 ${
                 copied 
                   ? 'bg-green-500 border-green-500 text-white shadow-[0_0_15px_rgba(34,197,94,0.4)]' 
                   : 'bg-background/60 border-white/10 text-white hover:text-primary'

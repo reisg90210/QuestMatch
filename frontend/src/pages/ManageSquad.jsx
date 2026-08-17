@@ -79,6 +79,29 @@ const ManageSquad = () => {
     }
   };
 
+  const isCreator = quest?.creator_id === user?.id;
+  const isMember = applications.some(app => app.applicant_id === user?.id && app.status === 'accepted');
+
+  const handleCompleteQuest = async () => {
+    if (window.confirm('Complete mission and award rewards to all squad members?')) {
+      try {
+        await questsApi.complete(id);
+        fetchSquadData();
+      } catch (err) {
+        alert('Critical: Reward uplink failed.');
+      }
+    }
+  };
+
+  const handleRequestCompletion = async () => {
+    try {
+      await questsApi.requestCompletion(id);
+      alert('Uplink sent: Completion requested from Mission Lead.');
+    } catch (err) {
+      alert('Signal lost: Could not send request.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center bg-background">
@@ -140,8 +163,25 @@ const ManageSquad = () => {
       </div>
 
       <div className="max-w-2xl mx-auto p-6 space-y-10">
-        {/* Applicants Section */}
-        <section className="space-y-4">
+        {quest.status === 'completed' && (
+          <motion.div 
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="p-8 bg-green-500/10 border-2 border-green-500/30 rounded-[2rem] text-center space-y-4 relative overflow-hidden"
+          >
+            <div className="absolute top-0 left-0 w-full h-1 bg-green-500/50" />
+            <Award size={48} className="mx-auto text-green-500" />
+            <div>
+              <h2 className="text-3xl font-rajdhani font-black text-white uppercase italic tracking-tighter">Mission Accomplished</h2>
+              <p className="text-green-500 text-xs font-black uppercase tracking-[0.3em] mt-1">Status: Rewards Distributed</p>
+            </div>
+            <p className="text-slate-400 text-sm max-w-sm mx-auto">The squad has successfully completed the objective. XP and referral credits have been credited to all participants.</p>
+          </motion.div>
+        )}
+
+        {/* Applicants Section (Lead Only) */}
+        {isCreator && quest.status === 'open' && (
+          <section className="space-y-4">
            <div className="flex items-center justify-between">
               <h3 className="text-primary font-rajdhani font-bold text-xl uppercase tracking-wider flex items-center gap-2">
                  Incoming Signals
@@ -298,17 +338,35 @@ const ManageSquad = () => {
            </div>
         </section>
         
-        {acceptedApps.length + 1 >= quest.total_slots && (
+        {quest.status === 'open' && (
           <motion.div 
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="p-6 bg-primary/10 border border-primary/20 rounded-3xl text-center space-y-4"
+            className="p-6 bg-surface-light/5 border border-white/10 rounded-3xl text-center space-y-4"
           >
-             <h4 className="text-primary font-rajdhani font-black text-2xl uppercase tracking-tighter italic">Squad Combat Ready</h4>
-             <p className="text-xs text-primary/70 font-medium">All positions have been filled. Launch the mission when ready.</p>
-             <button className="w-full py-4 bg-primary text-background font-black rounded-xl shadow-[0_0_30px_rgba(0,255,255,0.3)] uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all">
-                Initiate Mission
-             </button>
+             {isCreator ? (
+               <>
+                 <h4 className="text-white font-rajdhani font-black text-2xl uppercase tracking-tighter italic">Mission Control</h4>
+                 <p className="text-xs text-slate-500 font-medium">Finalize the objective to award XP and referral credit to your squad.</p>
+                 <button 
+                  onClick={handleCompleteQuest}
+                  className="w-full py-4 bg-primary text-background font-black rounded-xl shadow-[0_0_30px_rgba(0,255,255,0.3)] uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all"
+                 >
+                    Complete Mission & Award XP
+                 </button>
+               </>
+             ) : isMember ? (
+               <>
+                 <h4 className="text-white font-rajdhani font-black text-2xl uppercase tracking-tighter italic">Active Service</h4>
+                 <p className="text-xs text-slate-500 font-medium">Mission finished? Request the Lead to finalize and distribute rewards.</p>
+                 <button 
+                  onClick={handleRequestCompletion}
+                  className="w-full py-4 bg-secondary text-background font-black rounded-xl shadow-[0_0_30px_rgba(255,0,255,0.2)] uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all"
+                 >
+                    Request Mission Completion
+                 </button>
+               </>
+             ) : null}
           </motion.div>
         )}
       </div>

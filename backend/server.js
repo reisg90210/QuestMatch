@@ -41,7 +41,13 @@ const initDB = async () => {
     await db.run('CREATE TABLE IF NOT EXISTS swipes (id INTEGER PRIMARY KEY AUTOINCREMENT, swiper_id TEXT NOT NULL, swiped_id TEXT NOT NULL, direction TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(swiper_id) REFERENCES users(id), FOREIGN KEY(swiped_id) REFERENCES users(id), UNIQUE(swiper_id, swiped_id))');
     await db.run('CREATE TABLE IF NOT EXISTS matches (id INTEGER PRIMARY KEY AUTOINCREMENT, user1_id TEXT NOT NULL, user2_id TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(user1_id) REFERENCES users(id), FOREIGN KEY(user2_id) REFERENCES users(id), UNIQUE(user1_id, user2_id))');
     await db.run('CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT, match_id INTEGER NOT NULL, sender_id TEXT NOT NULL, content TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(match_id) REFERENCES matches(id), FOREIGN KEY(sender_id) REFERENCES users(id))');
-    await db.run('CREATE TABLE IF NOT EXISTS quests (id TEXT PRIMARY KEY, creator_id TEXT NOT NULL, game_id TEXT NOT NULL, quest_type TEXT NOT NULL, title TEXT NOT NULL, description TEXT, requirements TEXT, start_time TEXT, total_slots INTEGER NOT NULL, filled_slots INTEGER DEFAULT 1, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(creator_id) REFERENCES users(id))');
+    await db.run('CREATE TABLE IF NOT EXISTS quests (id TEXT PRIMARY KEY, creator_id TEXT NOT NULL, game_id TEXT NOT NULL, quest_type TEXT NOT NULL, title TEXT NOT NULL, description TEXT, requirements TEXT, start_time TEXT, total_slots INTEGER NOT NULL, filled_slots INTEGER DEFAULT 1, status TEXT DEFAULT "open", created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(creator_id) REFERENCES users(id))');
+    
+    // Migration: Add columns if they don't exist
+    try {
+      await db.run('ALTER TABLE quests ADD COLUMN status TEXT DEFAULT "open"');
+    } catch (e) { /* already exists */ }
+    
     await db.run('CREATE TABLE IF NOT EXISTS applications (id INTEGER PRIMARY KEY AUTOINCREMENT, quest_id TEXT NOT NULL, applicant_id TEXT NOT NULL, status TEXT DEFAULT "pending", created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(quest_id) REFERENCES quests(id), FOREIGN KEY(applicant_id) REFERENCES users(id), UNIQUE(quest_id, applicant_id))');
     await db.run('CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, type TEXT NOT NULL, content TEXT NOT NULL, quest_id TEXT, sender_id TEXT, is_read BOOLEAN DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(user_id) REFERENCES users(id))');
     console.log('Database tables verified/created');
@@ -286,47 +292,7 @@ app.put('/api/applications/:id', authenticateToken, async (req, res) => {
         );
       }
     } else if (status === 'completed') {
-      // Referral Logic
-      const users = await db.run('SELECT referrer_id, first_quest_completed FROM users WHERE id = ?', [appData.applicant_id]);
-      const user = users[0];
-      
-      if (user && !user.first_quest_completed && user.referrer_id) {
-        // Mark first quest as completed for the referee
-        await db.run('UPDATE users SET first_quest_completed = 1 WHERE id = ?', [appData.applicant_id]);
-        
-        // Increment referrer's count
-        await db.run('UPDATE users SET referrals_count = referrals_count + 1 WHERE id = ?', [user.referrer_id]);
-        
-        // Check milestones for referrer
-        const referrers = await db.run('SELECT id, username, referrals_count FROM users WHERE id = ?', [user.referrer_id]);
-        const referrer = referrers[0];
-        
-        if (referrer) {
-          const count = referrer.referrals_count;
-          let milestone = null;
-          if (count === 1) milestone = 'Scout';
-          else if (count === 3) milestone = 'Commander';
-          else if (count === 10) milestone = 'Legend';
-          
-          if (milestone) {
-            console.log(`REFERRAL MILESTONE: User ${referrer.username} reached ${milestone} tier (${count} referrals)`);
-            // In a real app, we'd add rewards here. For now, we log and could send a notification.
-            await db.run(
-              'INSERT INTO notifications (user_id, type, content) VALUES (?, ?, ?)',
-              [referrer.id, 'referral_milestone', `Congratulations! You've reached the ${milestone} tier with ${count} successful referrals.`]
-            );
-          }
-        }
-      } else if (user && !user.first_quest_completed) {
-        // Even if no referrer, mark first quest as completed
-        await db.run('UPDATE users SET first_quest_completed = 1 WHERE id = ?', [appData.applicant_id]);
-      }
-      
-      // Notify applicant of completion
-      await db.run(
-        'INSERT INTO notifications (user_id, type, content, quest_id, sender_id) VALUES (?, ?, ?, ?, ?)',
-        [appData.applicant_id, 'quest_completed', `Congratulations! You've successfully completed the quest: ${appData.title}.`, appData.quest_id, req.user.id]
-      );
+      await processReferralReward(appData.applicant_id, appData.title, appData.quest_id, req.user.id);
     }
 
     await db.run('UPDATE applications SET status = ? WHERE id = ?', [status, req.params.id]);
@@ -436,6 +402,7 @@ app.get('/api/quests', async (req, res) => {
       SELECT q.*, u.username as creator_name, u.avatar_url as creator_avatar, u.is_verified as creator_is_verified
       FROM quests q
       JOIN users u ON q.creator_id = u.id
+      WHERE q.status = "open"
       ORDER BY q.created_at DESC
     `);
 
@@ -447,6 +414,52 @@ app.get('/api/quests', async (req, res) => {
     res.json(parsed);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch quests' });
+  }
+});
+
+app.post('/api/quests/:id/complete', authenticateToken, async (req, res) => {
+  try {
+    const quests = await db.run('SELECT * FROM quests WHERE id = ?', [req.params.id]);
+    if (quests.length === 0) return res.status(404).json({ error: 'Quest not found' });
+    const quest = quests[0];
+    
+    if (quest.creator_id !== req.user.id) return res.status(403).json({ error: 'Unauthorized' });
+
+    await db.run('UPDATE quests SET status = "completed" WHERE id = ?', [req.params.id]);
+    
+    // Award rewards to all accepted members
+    const members = await db.run('SELECT applicant_id FROM applications WHERE quest_id = ? AND status = "accepted"', [req.params.id]);
+    for (const member of members) {
+      await processReferralReward(member.applicant_id, quest.title, quest.id, req.user.id);
+      await db.run('UPDATE applications SET status = "completed" WHERE quest_id = ? AND applicant_id = ?', [req.params.id, member.applicant_id]);
+    }
+    
+    res.json({ message: 'Quest marked as completed and rewards issued' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to complete quest' });
+  }
+});
+
+app.post('/api/quests/:id/request-completion', authenticateToken, async (req, res) => {
+  try {
+    const quests = await db.run('SELECT * FROM quests WHERE id = ?', [req.params.id]);
+    if (quests.length === 0) return res.status(404).json({ error: 'Quest not found' });
+    const quest = quests[0];
+    
+    // Check if applicant is an accepted member
+    const apps = await db.run('SELECT status FROM applications WHERE quest_id = ? AND applicant_id = ?', [req.params.id, req.user.id]);
+    if (apps.length === 0 || apps[0].status !== 'accepted') {
+      return res.status(403).json({ error: 'Only accepted members can request completion' });
+    }
+
+    await db.run(
+      'INSERT INTO notifications (user_id, type, content, quest_id, sender_id) VALUES (?, ?, ?, ?, ?)',
+      [quest.creator_id, 'completion_request', `${req.user.username} has requested that you mark the quest "${quest.title}" as completed.`, quest.id, req.user.id]
+    );
+    
+    res.json({ message: 'Completion request sent to lead' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to send request' });
   }
 });
 
@@ -471,6 +484,100 @@ app.get('/api/quests/:id', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch quest' });
   }
 });
+
+// Reward and Referral Logic Helper
+const processReferralReward = async (userId, questTitle, questId, creatorId) => {
+  try {
+    const users = await db.run('SELECT id, username, referrer_id, first_quest_completed FROM users WHERE id = ?', [userId]);
+    const user = users[0];
+    
+    if (user && !user.first_quest_completed) {
+      // Mark first quest as completed for the referee
+      await db.run('UPDATE users SET first_quest_completed = 1 WHERE id = ?', [userId]);
+      
+      // Notify applicant of completion
+      await db.run(
+        'INSERT INTO notifications (user_id, type, content, quest_id, sender_id) VALUES (?, ?, ?, ?, ?)',
+        [userId, 'quest_completed', `Congratulations! You've successfully completed the quest: ${questTitle}.`, questId, creatorId]
+      );
+
+      if (user.referrer_id) {
+        // Increment referrer's count
+        await db.run('UPDATE users SET referrals_count = referrals_count + 1 WHERE id = ?', [user.referrer_id]);
+        
+        // Check milestones for referrer
+        const referrers = await db.run('SELECT id, username, referrals_count FROM users WHERE id = ?', [user.referrer_id]);
+        const referrer = referrers[0];
+        
+        if (referrer) {
+          const count = referrer.referrals_count;
+          let milestone = null;
+          if (count === 1) milestone = 'Scout';
+          else if (count === 3) milestone = 'Commander';
+          else if (count === 10) milestone = 'Legend';
+          
+          if (milestone) {
+            console.log(`REFERRAL MILESTONE: User ${referrer.username} reached ${milestone} tier (${count} referrals)`);
+            await db.run(
+              'INSERT INTO notifications (user_id, type, content) VALUES (?, ?, ?)',
+              [referrer.id, 'referral_milestone', `Congratulations! You've reached the ${milestone} tier with ${count} successful referrals.`]
+            );
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error processing referral reward:', error);
+  }
+};
+
+// Quest Completion Automation
+const autoCompleteQuests = async () => {
+  console.log('Running Quest Auto-Completion Engine...');
+  try {
+    const openQuests = await db.run('SELECT * FROM quests WHERE status = "open"');
+    const now = new Date();
+    
+    for (const quest of openQuests) {
+      let shouldComplete = false;
+      const createdAt = new Date(quest.created_at);
+      
+      if (quest.start_time) {
+        const startTime = new Date(quest.start_time);
+        // If start_time is valid date and was more than 3 hours ago
+        if (!isNaN(startTime.getTime())) {
+          const threeHoursAfterStart = new Date(startTime.getTime() + 3 * 60 * 60 * 1000);
+          if (now > threeHoursAfterStart) shouldComplete = true;
+        } else {
+          // Fallback for non-standard time strings (6h after creation)
+          const sixHoursAfterCreation = new Date(createdAt.getTime() + 6 * 60 * 60 * 1000);
+          if (now > sixHoursAfterCreation) shouldComplete = true;
+        }
+      } else {
+        // No start time, 6h after creation
+        const sixHoursAfterCreation = new Date(createdAt.getTime() + 6 * 60 * 60 * 1000);
+        if (now > sixHoursAfterCreation) shouldComplete = true;
+      }
+      
+      if (shouldComplete) {
+        console.log(`Auto-completing quest: ${quest.title} (${quest.id})`);
+        await db.run('UPDATE quests SET status = "completed" WHERE id = ?', [quest.id]);
+        
+        // Award rewards to all accepted members
+        const members = await db.run('SELECT applicant_id FROM applications WHERE quest_id = ? AND status = "accepted"', [quest.id]);
+        for (const member of members) {
+          await processReferralReward(member.applicant_id, quest.title, quest.id, quest.creator_id);
+          await db.run('UPDATE applications SET status = "completed" WHERE quest_id = ? AND applicant_id = ?', [quest.id, member.applicant_id]);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Quest Auto-Completion Error:', error);
+  }
+};
+
+// Run auto-completion every 30 minutes
+setInterval(autoCompleteQuests, 30 * 60 * 1000);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
