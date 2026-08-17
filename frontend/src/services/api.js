@@ -47,6 +47,8 @@ export const quests = {
   getById: (id) => api.get(`/quests/${id}`),
   apply: (id) => api.post(`/quests/${id}/apply`),
   getApplications: (id) => api.get(`/quests/${id}/applications`),
+  complete: (id) => api.post(`/quests/${id}/complete`),
+  requestCompletion: (id) => api.post(`/quests/${id}/request-completion`),
 };
 
 export const applications = {
