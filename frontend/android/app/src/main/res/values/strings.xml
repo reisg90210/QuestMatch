@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">QuestMatch</string>
+    <string name="title_activity_main">QuestMatch</string>
+    <string name="package_name">com.questmatch.app</string>
+    <string name="custom_url_scheme">com.questmatch.app</string>
+</resources>

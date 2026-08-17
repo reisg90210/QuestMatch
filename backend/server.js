@@ -32,6 +32,12 @@ const initDB = async () => {
     try {
       await db.run('ALTER TABLE users ADD COLUMN first_quest_completed BOOLEAN DEFAULT 0');
     } catch (e) { /* already exists */ }
+    try {
+      await db.run('ALTER TABLE users ADD COLUMN xp INTEGER DEFAULT 0');
+    } catch (e) { /* already exists */ }
+    try {
+      await db.run('ALTER TABLE users ADD COLUMN level INTEGER DEFAULT 1');
+    } catch (e) { /* already exists */ }
     await db.run('CREATE TABLE IF NOT EXISTS swipes (id INTEGER PRIMARY KEY AUTOINCREMENT, swiper_id TEXT NOT NULL, swiped_id TEXT NOT NULL, direction TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(swiper_id) REFERENCES users(id), FOREIGN KEY(swiped_id) REFERENCES users(id), UNIQUE(swiper_id, swiped_id))');
     await db.run('CREATE TABLE IF NOT EXISTS matches (id INTEGER PRIMARY KEY AUTOINCREMENT, user1_id TEXT NOT NULL, user2_id TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(user1_id) REFERENCES users(id), FOREIGN KEY(user2_id) REFERENCES users(id), UNIQUE(user1_id, user2_id))');
     await db.run('CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT, match_id INTEGER NOT NULL, sender_id TEXT NOT NULL, content TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(match_id) REFERENCES matches(id), FOREIGN KEY(sender_id) REFERENCES users(id))');
@@ -71,11 +77,9 @@ app.post('/api/auth/signup', async (req, res) => {
   if (!username || !email || !password) return res.status(400).json({ error: 'Missing fields' });
 
   try {
-    // Ensure tables exist before signup
-    await initDB();
     const passwordHash = await bcrypt.hash(password, 10);
     const id = uuidv4();
-    await db.run('INSERT INTO users (id, username, email, password_hash, referrer_id) VALUES (?, ?, ?, ?, ?)', [id, username, email, passwordHash, referrer_id || null]);
+    await db.run('INSERT INTO users (id, username, email, password_hash, referrer_id, xp, level) VALUES (?, ?, ?, ?, ?, 0, 1)', [id, username, email, passwordHash, referrer_id || null]);
     res.status(201).json({ message: 'User created', id });
   } catch (error) {
     console.error('Signup Error:', error);
@@ -93,7 +97,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '24h' });
-    res.json({ token, user: { id: user.id, username: user.username, email: user.email, is_premium: !!user.is_premium, is_verified: !!user.is_verified } });
+    res.json({ token, user: { id: user.id, username: user.username, email: user.email, is_premium: !!user.is_premium, is_verified: !!user.is_verified, xp: user.xp || 0, level: user.level || 1 } });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Login failed' });
@@ -103,7 +107,7 @@ app.post('/api/auth/login', async (req, res) => {
 // User Profile Routes
 app.get('/api/users/profile', authenticateToken, async (req, res) => {
   try {
-    const users = await db.run('SELECT id, username, email, bio, platforms, games, skill_level, avatar_url, is_premium, is_verified, referrer_id, referrals_count, first_quest_completed FROM users WHERE id = ?', [req.user.id]);
+    const users = await db.run('SELECT id, username, email, bio, platforms, games, skill_level, avatar_url, is_premium, is_verified, referrer_id, referrals_count, first_quest_completed, xp, level FROM users WHERE id = ?', [req.user.id]);
     res.json(users[0]);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch profile' });
@@ -143,7 +147,7 @@ app.get('/api/discover', authenticateToken, async (req, res) => {
   try {
     // Basic discovery: users not yet swiped on
     const potentialMatches = await db.run(`
-      SELECT id, username, bio, platforms, games, skill_level, avatar_url, is_premium, is_verified
+      SELECT id, username, bio, platforms, games, skill_level, avatar_url, is_premium, is_verified, level
       FROM users
       WHERE id != ?
       AND id NOT IN (SELECT swiped_id FROM swipes WHERE swiper_id = ?)
@@ -185,7 +189,7 @@ app.post('/api/swipes', authenticateToken, async (req, res) => {
 app.get('/api/matches', authenticateToken, async (req, res) => {
   try {
     const matches = await db.run(`
-      SELECT m.id as match_id, u.id, u.username, u.avatar_url, u.is_verified
+      SELECT m.id as match_id, u.id, u.username, u.avatar_url, u.is_verified, u.level
       FROM matches m
       JOIN users u ON (u.id = m.user1_id OR u.id = m.user2_id)
       WHERE (m.user1_id = ? OR m.user2_id = ?) AND u.id != ?

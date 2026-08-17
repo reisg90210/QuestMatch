@@ -8,6 +8,12 @@ import FilterSidebar from '../components/FilterSidebar';
 import { discovery, quests, swipes } from '../services/api';
 import radarEmpty from '../assets/empty_state_radar.png';
 
+const getRank = (level) => {
+  if (level >= 20) return 'Legendary Explorer';
+  if (level >= 10) return 'Veteran Voyager';
+  return 'Novice Scout';
+};
+
 const Discover = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -395,7 +401,7 @@ const Discover = () => {
                   <h2 className="text-4xl font-rajdhani font-bold text-text-high flex items-center gap-3 uppercase tracking-tight">
                     {currentItem.username}
                     {currentItem.is_verified && <VerifiedBadge size={28} />}
-                    <span className="text-xl font-normal text-primary">LVL 24</span>
+                    <span className="text-xl font-normal text-primary">LVL {currentItem.level || 1} • {getRank(currentItem.level || 1)}</span>
                   </h2>
                   {currentItem.is_premium && (
                     <div className="flex items-center gap-1.5 mt-1 text-secondary font-bold text-xs uppercase tracking-[0.2em]">

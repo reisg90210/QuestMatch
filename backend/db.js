@@ -14,6 +14,7 @@ async function run(sql, params = []) {
   try {
     const result = await client.execute({ sql, args: params });
     // Normalize rows to standard JS objects
+    if (!result.rows) return [];
     return result.rows.map(row => {
       const obj = {};
       Object.keys(row).forEach(key => {

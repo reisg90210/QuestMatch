@@ -11,7 +11,8 @@ import {
   Video,
   ShieldCheck,
   Zap,
-  AlertCircle
+  AlertCircle,
+  Award
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -19,6 +20,12 @@ import { matches as matchesApi } from '../services/api';
 import VerifiedBadge from '../components/VerifiedBadge';
 import FilterSidebar from '../components/FilterSidebar';
 import radarEmpty from '../assets/empty_state_radar.png';
+
+const getRank = (level) => {
+  if (level >= 20) return 'Legendary Explorer';
+  if (level >= 10) return 'Veteran Voyager';
+  return 'Novice Scout';
+};
 
 const Matches = () => {
   const [matches, setMatches] = useState([]);
@@ -113,8 +120,9 @@ const Matches = () => {
               <div className="flex items-center gap-1.5">
                 <span className="text-white font-bold text-sm">{selectedMatch.username}</span>
                 {selectedMatch.is_verified && <VerifiedBadge size={12} />}
+                <span className="text-[10px] text-primary font-bold uppercase ml-2">LVL {selectedMatch.level || 1}</span>
               </div>
-              <span className="text-[10px] text-green-500 font-bold uppercase tracking-widest">Active Link</span>
+              <span className="text-[10px] text-green-500 font-bold uppercase tracking-widest">{getRank(selectedMatch.level || 1)}</span>
             </div>
           </div>
           <div className="flex items-center gap-4 text-text-low">
@@ -256,6 +264,7 @@ const Matches = () => {
                   <div className="flex items-center gap-1.5">
                     <h3 className="text-white font-rajdhani font-bold uppercase tracking-wide text-xl truncate">{match.username}</h3>
                     {match.is_verified && <VerifiedBadge size={14} />}
+                    <span className="text-[10px] text-primary font-bold ml-auto shrink-0">LVL {match.level || 1}</span>
                   </div>
                   <p className="text-text-low text-xs mt-0.5 font-medium truncate italic">
                     Ready for mission deployment...
