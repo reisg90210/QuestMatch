@@ -7,17 +7,23 @@ const Signup = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const referrer_id = searchParams.get('ref');
+    setLoading(true);
+    setError('');
+    
     try {
       await auth.signup({ username, email, password, referrer_id });
       navigate('/login');
     } catch (err) {
-      setError(err.response?.data?.error || 'Signup failed');
+      setError(err.response?.data?.error || 'Signup failed. Please check your connection and try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -46,7 +52,8 @@ const Signup = () => {
             <input
               type="text"
               placeholder="e.g. GhostWalker"
-              className="w-full px-6 py-4 bg-background border border-surface rounded-xl text-text-high text-base placeholder:text-text-low/30 focus:outline-none focus:border-primary transition-colors shadow-inner"
+              disabled={loading}
+              className="w-full px-6 py-4 bg-background border border-surface rounded-xl text-text-high text-base placeholder:text-text-low/30 focus:outline-none focus:border-primary transition-colors shadow-inner disabled:opacity-50"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
@@ -57,8 +64,9 @@ const Signup = () => {
             <label className="text-[10px] font-bold text-text-low uppercase tracking-[0.2em] ml-2">Comm-Link (Email)</label>
             <input
               type="email"
-              placeholder="stryker@questmatch.io"
-              className="w-full px-6 py-4 bg-background border border-surface rounded-xl text-text-high text-base placeholder:text-text-low/30 focus:outline-none focus:border-primary transition-colors shadow-inner"
+              placeholder="stryker@example.com"
+              disabled={loading}
+              className="w-full px-6 py-4 bg-background border border-surface rounded-xl text-text-high text-base placeholder:text-text-low/30 focus:outline-none focus:border-primary transition-colors shadow-inner disabled:opacity-50"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -70,7 +78,8 @@ const Signup = () => {
             <input
               type="password"
               placeholder="••••••••"
-              className="w-full px-6 py-4 bg-background border border-surface rounded-xl text-text-high text-base placeholder:text-text-low/30 focus:outline-none focus:border-primary transition-colors shadow-inner"
+              disabled={loading}
+              className="w-full px-6 py-4 bg-background border border-surface rounded-xl text-text-high text-base placeholder:text-text-low/30 focus:outline-none focus:border-primary transition-colors shadow-inner disabled:opacity-50"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -79,9 +88,17 @@ const Signup = () => {
           
           <button 
             type="submit"
-            className="w-full py-5 bg-primary text-background rounded-xl font-rajdhani font-bold text-xl uppercase tracking-[0.1em] hover:brightness-110 transition shadow-lg shadow-primary/20 mt-4"
+            disabled={loading}
+            className="w-full py-5 bg-primary text-background rounded-xl font-rajdhani font-bold text-xl uppercase tracking-[0.1em] hover:brightness-110 transition shadow-lg shadow-primary/20 mt-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            Finalize Enlistment
+            {loading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-background border-t-transparent rounded-full animate-spin" />
+                Processing...
+              </>
+            ) : (
+              'Finalize Enlistment'
+            )}
           </button>
           
           <div className="pt-6 flex flex-col items-center gap-4">

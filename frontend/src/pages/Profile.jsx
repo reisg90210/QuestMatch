@@ -5,6 +5,12 @@ import { LogOut, Save, Camera, Check, X, ShieldCheck, Zap, Copy, Award } from 'l
 import VerifiedBadge from '../components/VerifiedBadge';
 import { useNavigate } from 'react-router-dom';
 
+const getRank = (level) => {
+  if (level >= 20) return 'Legendary Explorer';
+  if (level >= 10) return 'Veteran Voyager';
+  return 'Novice Scout';
+};
+
 const Profile = () => {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
@@ -16,7 +22,9 @@ const Profile = () => {
     avatar_url: '',
     is_premium: false,
     is_verified: false,
-    referrals_count: 0
+    referrals_count: 0,
+    level: 1,
+    xp: 0
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -152,7 +160,7 @@ const Profile = () => {
                 Upgrade to Elite
               </button>
             )}
-            <p className="text-text-low text-[10px] font-black uppercase tracking-[0.2em] opacity-60">LVL 24 • LEGENDARY EXPLORER</p>
+            <p className="text-text-low text-[10px] font-black uppercase tracking-[0.2em] opacity-60">LVL {profile.level || 1} • {getRank(profile.level || 1)}</p>
           </div>
         </div>
       </div>

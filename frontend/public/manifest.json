@@ -1,0 +1,23 @@
+{
+  "short_name": "QuestMatch",
+  "name": "QuestMatch - Find Your Squad",
+  "icons": [
+    {
+      "src": "logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/questmatch-logo.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#00F5FF",
+  "background_color": "#0B0C10",
+  "orientation": "portrait"
+}
